@@ -1,0 +1,10 @@
+{
+  "name": "macroquest-editor",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Редактор графических квестов с автономным HTML-экспортом",
+  "scripts": {
+    "start": "node dev-server.cjs",
+    "test": "node --test rules.test.cjs validate.test.cjs saves.test.cjs html-export.test.cjs scene-features.test.cjs character-library.test.cjs"
+  }
+}
