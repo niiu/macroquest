@@ -1,4 +1,17 @@
 'use strict';
+const sidebar=document.querySelector('.sidebar'),sidebarToggle=el('button','sidebar-toggle');
+sidebar.id='project-sidebar';sidebarToggle.id='toggle-sidebar';sidebarToggle.setAttribute('aria-controls',sidebar.id);
+document.querySelector('.topbar').prepend(sidebarToggle);
+let sidebarCollapsed=false;
+try{sidebarCollapsed=localStorage.getItem('macroquest.sidebar-collapsed')==='true';}catch(e){}
+function updateSidebar(){
+  sidebar.hidden=sidebarCollapsed;document.body.classList.toggle('sidebar-collapsed',sidebarCollapsed);
+  sidebarToggle.textContent=sidebarCollapsed?'☰':'«';
+  const label=sidebarCollapsed?'Открыть боковую панель':'Свернуть боковую панель';
+  sidebarToggle.title=label;sidebarToggle.setAttribute('aria-label',label);sidebarToggle.setAttribute('aria-expanded',String(!sidebarCollapsed));
+}
+sidebarToggle.onclick=()=>{sidebarCollapsed=!sidebarCollapsed;updateSidebar();try{localStorage.setItem('macroquest.sidebar-collapsed',String(sidebarCollapsed));}catch(e){}};
+updateSidebar();
 const graphViewport=$('graph-viewport'),graphFrame=el('div','graph-frame');
 graphViewport.before(graphFrame);graphFrame.append(graphViewport);
 const expansionButtons=[];
