@@ -15,7 +15,7 @@ for(const [direction,label] of [['left','←'],['right','→'],['up','↑'],['do
 }
 const mapPanel=el('div','graph-map-panel'),mapCanvas=el('canvas','graph-minimap'),mapCaption=el('span','','Карта · клик или перетаскивание');
 mapCanvas.width=220;mapCanvas.height=110;mapCanvas.tabIndex=0;mapCanvas.setAttribute('aria-label','Карта графа. Клик для перехода, стрелки для прокрутки.');
-mapPanel.append(mapCanvas,mapCaption);document.querySelector('.canvas-footer').append(mapPanel);
+mapPanel.append(mapCanvas,mapCaption);graphFrame.append(mapPanel);
 let minimapFrame=0;
 function requestMinimap(){if(!minimapFrame)minimapFrame=requestAnimationFrame(()=>{minimapFrame=0;drawMinimap();});}
 function mapTransform(){const size={width:parseFloat($('graph').style.width)||1000,height:parseFloat($('graph').style.height)||780},scale=Math.min(220/size.width,110/size.height);return {...size,scale,x:(220-size.width*scale)/2,y:(110-size.height*scale)/2};}
