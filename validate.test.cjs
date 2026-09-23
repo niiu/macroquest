@@ -3,6 +3,7 @@ const vm = require('node:vm');
 const assert = require('node:assert/strict');
 const QuestZones = require('./zones.js');
 const QuestLayers = require('./scene-layers.js');
+const QuestGraphArea = require('./graph-area.js');
 const QuestRules = require('./rules.js');
 const source = fs.readFileSync(`${__dirname}/app.js`, 'utf8').split('let project=sample();')[0];
 vm.runInNewContext(source + `
@@ -34,7 +35,7 @@ vm.runInNewContext(source + `
   validate(JSON.parse(JSON.stringify(conditional)));
   conditional.scenes[0].choices[0].conditions[0].variable = 'missing';
   assert.throws(() => validate(conditional));
-`, {assert, QuestZones, QuestRules, QuestLayers});
+`, {assert, QuestZones, QuestRules, QuestLayers, QuestGraphArea});
 
 const paint = {mode:'paint', radius:.1, points:[[.2,.5],[.8,.5]]};
 const erase = {mode:'erase', radius:.05, points:[[.5,.5]]};

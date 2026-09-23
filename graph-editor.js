@@ -75,9 +75,9 @@ mobileEditor.addEventListener('change',updateEditorPlacement);
 updateEditorPlacement();
 
 function resizeGraph(){
-  const w=Math.max(1000,...project.scenes.map(s=>s.x+340)),h=Math.max(780,...project.scenes.map(s=>s.y+nodeHeight(s)+120));
+  const {width:w,height:h}=QuestGraphArea.bounds(project,nodeHeight);
   $('graph').style.width=w+'px';$('graph').style.height=h+'px';
-  $('graph-space').style.width=w*zoom+'px';$('graph-space').style.height=h*zoom+'px';
+  $('graph-space').style.width=w*zoom+'px';$('graph-space').style.height=h*zoom+'px';if(typeof requestMinimap==='function')requestMinimap();
 }
 function renderGraph(){
   undoScene.hidden=!lastDeletedScene||lastDeletedScene.project!==project;
@@ -140,10 +140,10 @@ function drawEdges(){
   }
 }
 function dragScene(e,s,node,card){
-  if(e.button!==0)return;const startX=e.clientX,startY=e.clientY,x=s.x,y=s.y;let moved=false;
+  if(e.button!==0)return;const startX=e.clientX,startY=e.clientY,x=s.x,y=s.y,size=QuestGraphArea.bounds(project,nodeHeight),height=nodeHeight(s);let moved=false;
   card.setPointerCapture(e.pointerId);
-  card.onpointermove=ev=>{if(Math.hypot(ev.clientX-startX,ev.clientY-startY)>5)moved=true;if(!moved)return;s.x=Math.max(20,Math.min(20000,x+(ev.clientX-startX)/zoom));s.y=Math.max(55,Math.min(20000,y+(ev.clientY-startY)/zoom));node.style.left=s.x+'px';node.style.top=s.y+'px';resizeGraph();drawEdges();};
-  const end=ev=>{card.onpointermove=card.onpointerup=card.onpointercancel=null;if(card.hasPointerCapture(e.pointerId))card.releasePointerCapture(e.pointerId);if(moved){node.dataset.suppressUntil=performance.now()+350;if(ev.type==='pointercancel'){s.x=x;s.y=y;node.style.left=x+'px';node.style.top=y+'px';drawEdges();}else save();}};
+  card.onpointermove=ev=>{if(Math.hypot(ev.clientX-startX,ev.clientY-startY)>5)moved=true;if(!moved)return;Object.assign(s,QuestGraphArea.position(size,x+(ev.clientX-startX)/zoom,y+(ev.clientY-startY)/zoom,height));node.style.left=s.x+'px';node.style.top=s.y+'px';drawEdges();requestMinimap();};
+  const end=ev=>{card.onpointermove=card.onpointerup=card.onpointercancel=null;if(card.hasPointerCapture(e.pointerId))card.releasePointerCapture(e.pointerId);if(moved){node.dataset.suppressUntil=performance.now()+350;if(ev.type==='pointercancel'){s.x=x;s.y=y;node.style.left=x+'px';node.style.top=y+'px';drawEdges();requestMinimap();}else save();}};
   card.onpointerup=end;card.onpointercancel=end;
 }
 function setConnectionStatus(){

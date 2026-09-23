@@ -1,0 +1,15 @@
+const assert=require('node:assert/strict');
+const area=require('./graph-area.js'),saves=require('./saves.js');
+const project={title:'Поле',start:'a',scenes:[{id:'a',title:'A',text:'',x:70,y:75,choices:[{text:'Путь',target:'b'}]},{id:'b',title:'B',text:'',x:390,y:320,choices:[]}]};
+const key=saves.questKey(project),initial=area.bounds(project),dx=project.scenes[1].x-project.scenes[0].x;
+assert.deepEqual(area.expand(project,'left'),{amount:1200,dx:1200,dy:0});
+assert.equal(project.graphSize.width,initial.width+1200);assert.equal(project.scenes[0].x,1270);assert.equal(project.scenes[1].x-project.scenes[0].x,dx);
+area.expand(project,'up');assert.equal(project.scenes[0].y,1275);
+assert.equal(saves.questKey(project),key,'editor expansion preserves saves');
+const before=structuredClone(project.scenes);area.expand(project,'right');area.expand(project,'down');assert.deepEqual(project.scenes,before);
+const roundTrip=JSON.parse(JSON.stringify(project));assert.deepEqual(area.bounds(roundTrip),project.graphSize);
+assert.deepEqual(area.position({width:1000,height:780},-100,900),{x:20,y:506});
+assert.equal(area.position({width:1000,height:780},9000,55).x,660,'drag is bounded, not auto-expanding');
+project.graphSize={width:area.MAX,height:area.MAX};assert.equal(area.expand(project,'left').amount,0);assert.equal(area.valid({width:Infinity,height:1000}),false);
+assert.equal(area.valid({width:500,height:780}),false);assert.throws(()=>area.expand(project,'invalid'));
+console.log('PASS: manual expansion in four directions, relative positions, save compatibility, JSON round trip, drag limits and size validation');
