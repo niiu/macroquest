@@ -123,7 +123,7 @@ $('dialogue-add-answer').onclick=()=>$('add-choice').onclick();
 $('dialogue-next').onclick=()=>{
   if(project.scenes.length>=500)return alert('Максимум 500 сцен.');
   const previous=scene();$('add-scene').onclick();const next=scene();
-  next.dialogue=true;next.title='Следующая реплика';next.speaker=previous.speaker||'';next.text='';
+  QuestLayers.inheritArtwork(previous,next);next.dialogue=true;next.title='Следующая реплика';next.speaker=previous.speaker||'';next.text='';
   previous.choices.push({text:'Продолжить разговор',target:next.id});
   save();renderGraph();renderInspector();$('dialogue-text').focus();
 };

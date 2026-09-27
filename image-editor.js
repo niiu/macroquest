@@ -11,7 +11,12 @@ function syncZoneTools(){
   for(const id of ['brush-tool','eraser-tool','brush-size'])$(id).disabled=!enabled;
   $('undo-zone').disabled=!enabled||!choice.zone?.length;
   $('clear-zone').disabled=!enabled||!choice.zone?.length;
-  $('remove-image').disabled=!s.image;
+  const parent=project.scenes.find(p=>p.id===s.imageParent),inherited=!!(s.dialogue&&parent&&s.newLocationImage!==true);
+  $('location-image-settings').hidden=!s.dialogue;
+  $('new-location-image').checked=!inherited;$('new-location-image').disabled=!parent;
+  $('location-image-hint').textContent=inherited?'Фон скопирован из «'+parent.title+'». Включите чекбокс, чтобы загрузить другой фон для этой реплики.':parent?'Можно загрузить новую картинку. Предыдущая реплика останется без изменений.':'У этой сцены нет предыдущей реплики — загрузите её собственный фон.';
+  $('upload-image').disabled=inherited;
+  $('remove-image').disabled=!s.image||inherited;
   $('brush-tool').setAttribute('aria-pressed',String(paintTool==='paint'));
   $('eraser-tool').setAttribute('aria-pressed',String(paintTool==='erase'));
   $('zone-canvas').style.cursor=enabled?'none':'default';
@@ -82,6 +87,16 @@ $('zone-canvas').onlostpointercapture=()=>finishStroke(false);
 $('zone-canvas').onpointerleave=()=>{$('brush-cursor').hidden=true;};
 
 function decodeImage(src){return new Promise((resolve,reject)=>{const img=new Image();img.onload=()=>resolve(img);img.onerror=()=>reject(Error('Не удалось прочитать изображение.'));img.src=src;});}
+$('new-location-image').onchange=e=>{
+  const owner=scene(),parent=project.scenes.find(p=>p.id===owner.imageParent);
+  if(!parent){syncZoneTools();return;}
+  if(!e.target.checked&&owner.image!==parent.image){
+    if(owner.choices.some(c=>c.zone?.length)&&!confirm('Вернуть фон предыдущей реплики и очистить зоны текущей?')){e.target.checked=true;return;}
+    if(parent.image)owner.image=parent.image;else delete owner.image;
+    owner.choices.forEach(c=>{c.zone=[];});
+  }
+  owner.newLocationImage=e.target.checked;save();renderImageEditor();renderCharacters();renderGraph();
+};
 $('upload-image').onclick=()=>$('image-file').click();
 $('image-file').onchange=async e=>{
   const file=e.target.files[0];if(!file)return;
@@ -99,7 +114,7 @@ $('image-file').onchange=async e=>{
     canvas.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);
     owner.image=canvas.toDataURL('image/webp',.88);owner.choices.forEach(c=>{c.zone=[];});
     save();if(scene()===owner){renderImageEditor();renderChoices();}renderGraph();
-  }catch(err){alert(err.message);}finally{e.target.value='';$('upload-image').disabled=false;}
+  }catch(err){alert(err.message);}finally{e.target.value='';syncZoneTools();}
 };
 $('remove-image').onclick=()=>{
   if(!scene().image||!confirm('Убрать изображение и все его зоны? Действия и переходы сохранятся.'))return;

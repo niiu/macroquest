@@ -51,3 +51,18 @@ assert.equal(saves.questKey(graphContext.project),saves.questKey(talkExport),'di
 graphContext.removeScene('mid');assert.equal(talkPlacement.dialogue,undefined);layers.validate(graphContext.project);
 graphContext.restoreScene();assert.equal(talkPlacement.dialogue,'mid');layers.validate(graphContext.project);
 console.log('PASS: dialogue references removed/restored with scene and save identity matches HTML');
+
+const inheritedReply={id:'reply-art',title:'Ответ',text:'',x:0,y:0,dialogue:true,choices:[]};
+layers.inheritArtwork(project.scenes[0],inheritedReply);
+assert.equal(inheritedReply.image,project.scenes[0].image);
+assert.equal(inheritedReply.imageParent,project.scenes[0].id);
+assert.equal(inheritedReply.newLocationImage,false);
+assert.deepEqual(inheritedReply.actors,project.scenes[0].actors);
+inheritedReply.actors[0].x=.1;assert.equal(project.scenes[0].actors[0].x,.5,'placements are copied independently');
+const inheritedQuest=structuredClone(project);inheritedQuest.scenes.push(inheritedReply);
+const inheritedData=JSON.parse(html.build(inheritedQuest).match(/<script id="quest-data" type="application\/json">([\s\S]*?)<\/script>/)[1]);
+assert.equal(inheritedData.scenes.at(-1).image,inheritedReply.image);
+assert.deepEqual(inheritedData.scenes.at(-1).actors,inheritedReply.actors);
+assert.equal(saves.questKey(inheritedQuest),saves.questKey(inheritedData),'editor inheritance metadata does not alter save compatibility');
+layers.inheritArtwork({id:'empty',actors:[]},inheritedReply);assert.equal(inheritedReply.image,undefined);
+console.log('PASS: next reply artwork copy, isolated placements, no-background source, HTML and save compatibility');

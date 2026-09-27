@@ -24,6 +24,11 @@
       for(const p of scene.actors)if(p.dialogue!==undefined&&!project.scenes.some(s=>s.id===p.dialogue&&s.dialogue))throw Error('Персонаж ссылается на отсутствующую реплику диалога.');
     }
   }
+  function inheritArtwork(source,target){
+    target.imageParent=source.id;target.newLocationImage=false;
+    if(source.image)target.image=source.image;else delete target.image;
+    target.actors=structuredClone(source.actors||[]);
+  }
   function actors(host,scene,characters){
     host.replaceChildren();
     if(!scene.image)return;
@@ -75,6 +80,6 @@
     return dispose;
   }
   const conversationCSS='.actor-layer:has(.talkable){z-index:5}.image-surface .scene-actor.talkable{pointer-events:auto;cursor:pointer}.talkable:hover,.talkable:focus-visible{filter:drop-shadow(0 0 7px #d8e5a0);outline:2px solid #c9dc91}.conversation{box-sizing:border-box;width:min(620px,92vw);max-height:85vh;overflow:auto;background:#1d251b;color:#e5e8dc;border:1px solid #8b9d68;border-radius:12px;padding:24px}.conversation::backdrop{background:#0009}.conversation-text{white-space:pre-wrap;line-height:1.6}.conversation-answer{display:block;width:100%;text-align:left;margin:10px 0}.conversation-exit{margin-top:22px}.conversation small{display:block}.conversation-inline{width:100%;max-height:none;margin:16px 0;overflow:visible}.conversation-inline h2{font-size:22px;margin-top:0}';
-  const api={conversations,conversationCSS,hover,validate,actors,paths,onImage,anchor,css:css+conversationCSS,pictures,picture};api.standaloneSource=()=>`(${installSceneLayers.toString()})(globalThis);`;
+  const api={inheritArtwork,conversations,conversationCSS,hover,validate,actors,paths,onImage,anchor,css:css+conversationCSS,pictures,picture};api.standaloneSource=()=>`(${installSceneLayers.toString()})(globalThis);`;
   if(typeof module!=='undefined')module.exports=api;else root.QuestLayers=api;
 })(globalThis);
