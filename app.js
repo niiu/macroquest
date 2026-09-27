@@ -55,7 +55,7 @@ function renderChoices(){
     const controls=el('div','choice-controls');const paint=el('button','','Нарисовать зону');paint.onclick=()=>{activeChoice=i;renderChoices();setSceneTab('image');paintZones();};
     const conditions=el('button','','Условия и последствия');conditions.onclick=()=>openPathEditor(s,c);
     const remove=el('button','quiet','Удалить действие');remove.onclick=()=>{if(c.zone?.length&&!confirm('Удалить действие вместе с нарисованной зоной?'))return;s.choices.splice(i,1);if(activeChoice>i)activeChoice--;save();renderChoices();renderGraph();paintZones();};
-    if(!s.dialogue)controls.append(paint);controls.append(conditions,remove);row.append(caption,input,label,target,el('p','hint',QuestRules.summary(c,project.variables||[])),controls);$('choices').append(row);
+    controls.append(paint);controls.append(conditions,remove);row.append(caption,input,label,target,el('p','hint',QuestRules.summary(c,project.variables||[])),controls);$('choices').append(row);
     if(c.effects?.length)row.insertBefore(el('p','effect-summary','При переходе: '+QuestRules.effectsSummary(c,project.variables||[])),controls);
   });
   if(!s.choices.length)$('choices').append(el('p','hint',s.dialogue?'Пока нет ответов. Добавьте ответ или следующую реплику.':'Пока нет действий. Добавьте первое действие, чтобы нарисовать его зону.'));
@@ -108,12 +108,12 @@ $('play').onclick=()=>{startPlayer();$('player').showModal();};$('close-player')
 
 function renderDialogueEditor(){
   const s=scene(),on=!!s.dialogue;
-  $('dialogue-editor').hidden=!on;$('dialogue-mode-hint').hidden=!on;
+  $('dialogue-editor').hidden=!on;$('dialogue-choice-editor').hidden=!on;$('dialogue-mode-hint').hidden=!on;
   (on?$('dialogue-answers'):$('scene-choices-home')).append($('choices'));
   $('dialogue-title').value=s.title;$('dialogue-speaker').value=s.speaker||'';$('dialogue-text').value=s.text;
-  $('zone-status').hidden=on;document.querySelector('.paint-toolbar').hidden=on;$('zone-canvas').style.pointerEvents=on?'none':'';
-  document.querySelector('.image-heading h2').textContent=on?'Картинка и персонажи':'Изображение и зоны выбора';
-  document.querySelector('.image-heading .hint').textContent=on?'Добавьте фон и разместите персонажей поверх него. Ответы игрока отображаются под картинкой.':'Выберите действие и закрасьте его область кистью.';
+  $('zone-status').hidden=false;document.querySelector('.paint-toolbar').hidden=false;$('zone-canvas').style.pointerEvents='';
+  document.querySelector('.image-heading h2').textContent='Картинка, зоны и персонажи';
+  document.querySelector('.image-heading .hint').textContent='Добавьте фон и персонажей. Выберите действие и нарисуйте его зону на картинке.';
   setSceneTab('text');
 }
 $('dialogue-title').oninput=e=>{scene().title=e.target.value;$('scene-heading').textContent=e.target.value;save();renderGraph();};
