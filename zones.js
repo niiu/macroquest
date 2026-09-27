@@ -55,6 +55,7 @@
     layer.width = w; layer.height = h;
     const lc = layer.getContext('2d');
     choices.forEach((choice, i) => {
+      if (!choice.zone?.length) return;
       lc.clearRect(0, 0, w, h);
       lc.fillStyle = lc.strokeStyle = color(i);
       for (const stroke of choice.zone || []) drawStroke(lc, stroke, w, h);

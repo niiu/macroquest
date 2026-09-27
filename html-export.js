@@ -12,7 +12,7 @@
     'use strict';
     const $=id=>document.getElementById(id);
     const quest=JSON.parse($('quest-data').textContent),variables=quest.variables||[];
-    let current=quest.start,state=QuestRules.initialState(variables),imageReady=false;
+    let current=quest.start,state=QuestRules.initialState(variables),imageReady=false,hoveredZone=-1;
     const saveControls=QuestSaves.attach({host:$('game-saves'),quest,getState:()=>({scene:current,state}),onLoad:saved=>{current=saved.scene;state=saved.state;$('restart-confirm').hidden=true;render();$('scene-title').focus({preventScroll:true});window.scrollTo({top:0,behavior:'auto'});}});
     const activeScene=()=>quest.scenes.find(s=>s.id===current);
     const result=choice=>QuestRules.transition(choice,variables,state);
@@ -21,7 +21,7 @@
       const next=QuestRules.resolve(choice,variables,state);if(!next.ok)return;
       state=next.state;current=next.target||current;render();$('roll-result').textContent=next.roll?.message||'';saveControls.autosave();$('scene-title').focus({preventScroll:true});window.scrollTo({top:0,behavior:'auto'});
     }
-    function drawZones(){if(imageReady)QuestZones.draw($('zones'),$('show-zones').checked?activeScene().choices:[]);}
+    function drawZones(){if(imageReady)QuestZones.draw($('zones'),$('show-zones').checked?activeScene().choices:activeScene().choices.map((c,i)=>i===hoveredZone?c:{zone:[]}),hoveredZone);}
     function hit(event){
       if(!imageReady)return null;
       const canvas=$('zones'),r=canvas.getBoundingClientRect();
@@ -51,7 +51,7 @@
         for(const v of entries){list.append(element('dt',v.name),element('dd',type==='flag'?(state[v.id]?'Включён':'Выключен'):String(state[v.id])+(type==='item'?' шт.':'')));}
         group.append(list);$('state').append(group);
       }
-      imageReady=false;$('image-wrap').hidden=!scene.image;$('image-error').hidden=true;
+      hoveredZone=-1;imageReady=false;$('image-wrap').hidden=!scene.image;$('image-error').hidden=true;
       $('hotspot').textContent='Нажмите на область изображения или выберите действие ниже.';$('zones').style.cursor='default';
       const image=$('image'),canvas=$('zones');canvas.getContext('2d').clearRect(0,0,canvas.width,canvas.height);
       image.onload=()=>{if(activeScene()!==scene)return;canvas.width=image.naturalWidth;canvas.height=image.naturalHeight;imageReady=true;drawZones();};
@@ -59,8 +59,8 @@
       if(scene.image){image.alt=scene.title||'Локация';image.src=scene.image;}else image.removeAttribute('src');
     }
     $('zones').onclick=e=>{const choice=hit(e);if(choice)take(choice);};
-    $('zones').onpointermove=e=>{const choice=hit(e),availability=choice?result(choice):null;$('zones').style.cursor=!choice?'default':availability.ok?'pointer':'not-allowed';$('hotspot').textContent=!choice?'Выберите область на изображении':availability.ok?choice.text:'🔒 '+choice.text+' · '+availability.reason;};
-    $('zones').onpointerleave=()=>{$('hotspot').textContent='Нажмите на область изображения или выберите действие ниже.';};
+    $('zones').onpointermove=e=>{const choice=hit(e),availability=choice?result(choice):null;const index=activeScene().choices.indexOf(choice);if(index!==hoveredZone){hoveredZone=index;drawZones();}QuestLayers.hover($('image-paths'),activeScene(),index);$('zones').style.cursor=!choice?'default':availability.ok?'pointer':'not-allowed';$('hotspot').textContent=!choice?'Выберите область на изображении':availability.ok?choice.text:'🔒 '+choice.text+' · '+availability.reason;};
+    $('zones').onpointerleave=()=>{hoveredZone=-1;drawZones();QuestLayers.hover($('image-paths'),activeScene(),-1);$('zones').style.cursor='default';$('hotspot').textContent='Нажмите на область изображения или выберите действие ниже.';};
     $('show-zones').onchange=drawZones;
     $('restart').onclick=()=>{$('restart-confirm').hidden=false;$('confirm-restart').focus();};
     $('cancel-restart').onclick=()=>{$('restart-confirm').hidden=true;$('restart').focus();};

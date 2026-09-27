@@ -33,7 +33,7 @@ const context={document:{createElement:()=>new Element()},module:{exports:{}}};v
 const layerAPI=context.module.exports,host=new Element();layerAPI.actors(host,project.scenes[0],project.characters);
 assert.equal(host.children.length,1);assert.equal(host.children[0].style.left,'50%');assert.equal(host.children[0].alt,'Путник');
 const zoned={...project.scenes[0],choices:[{text:'Идти',target:'mid',zone:[{mode:'paint',radius:.1,points:[[.3,.4]]}]}]};
-let taken;layerAPI.paths(host,zoned,project.scenes,()=>({ok:true}),c=>{taken=c;});assert.equal(host.children[0].textContent,'→ mid');host.children[0].onclick();assert.equal(taken,zoned.choices[0]);
+let taken;layerAPI.paths(host,zoned,project.scenes,()=>({ok:true}),c=>{taken=c;});assert.equal(host.children[0].textContent,zoned.choices[0].text+' → mid');host.children[0].onclick();assert.equal(taken,zoned.choices[0]);
 // Exercise the actual graph operations with isolated project data.
 const graphSource=fs.readFileSync('graph-editor.js','utf8').split("const undoDisconnect=")[0];
 const graphContext={matchMedia:()=>({}),el:()=>new Element(),document:{querySelector:()=>new Element()},$:get,QuestRules:rules,project:structuredClone(project),selected:'low',save(){},render(){},renderGraph(){}};
