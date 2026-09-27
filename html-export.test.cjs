@@ -23,6 +23,10 @@ class Element {
   replaceChildren(...nodes){this.children=nodes;}
   removeAttribute(name){delete this[name];}
   focus(){}
+  addEventListener(name,handler){this[name]=handler;}
+  showModal(){this.open=true;}
+  remove(){this.removed=true;}
+  classList={add(){}};
   setAttribute(name,value){this[name]=value;}
   getContext(){return {clearRect(){}};}
   getBoundingClientRect(){return {left:100,top:100,width:1000,height:500};}
@@ -92,3 +96,32 @@ assert.equal(get('scene-title').textContent,'Финал');assert.match(get('roll
 console.log('PASS: standalone HTML, escaped content, shared runtime, effects, conditions, zones, blocked zones, final scene, restart, invalid targets');
 console.log('PASS: exported character layers, image-only paths, D20 failure and critical branches');
 module.exports={project};
+
+const talkQuest=structuredClone(layered);
+talkQuest.scenes[0].actors[0].dialogue='hello';
+talkQuest.scenes.push({id:'hello',title:'Приветствие',text:'Чем помочь?',dialogue:true,choices:[
+{text:'Дай ключ',target:'reply',effects:[{variable:'key',op:'add',value:1}]},
+{text:'Тайный ответ',target:'end',conditions:[{variable:'key',op:'gte',value:1}]}
+]},{id:'reply',title:'Ответ',text:'Держи ключ.',dialogue:true,choices:[{text:'Идём к двери',target:'door'}]});
+const talkHTML=exporter.build(talkQuest),talkSource=talkHTML.match(/<script>([\s\S]*?)<\/script>/)[1];
+const talkData=JSON.parse(talkHTML.match(/<script id="quest-data" type="application\/json">([\s\S]*?)<\/script>/)[1]);
+assert.equal(talkData.scenes.find(s=>s.id==='hello').dialogue,true);
+context.document.body=new Element();
+elements.clear();get('quest-data').textContent=JSON.stringify(talkData);vm.runInNewContext(talkSource,context);
+get('actors').children[0].onclick();
+let panel=context.document.body.children.at(-1);
+assert.equal(panel.open,true);assert.equal(panel.children[1].textContent,'Чем помочь?');
+assert.equal(panel.children.find(e=>e.textContent==='Тайный ответ').disabled,true);
+panel.children.find(e=>e.textContent==='Дай ключ').onclick();
+assert.equal(panel.children[1].textContent,'Держи ключ.');
+assert.equal(get('scene-title').textContent,'Начало','dialogue keeps background scene');
+panel.children.find(e=>e.textContent==='Завершить разговор').onclick();
+assert.equal(panel.removed,true);assert.equal(get('scene-title').textContent,'Начало');
+get('actors').children[0].onclick();panel=context.document.body.children.at(-1);
+assert.equal(panel.children.find(e=>e.textContent==='Тайный ответ').disabled,false,'dialogue effects persist and unlock answers');
+panel.children.find(e=>e.textContent==='Дай ключ').onclick();
+panel.children.find(e=>e.textContent==='Идём к двери').onclick();
+assert.equal(get('scene-title').textContent,'Дверь','ordinary scene target leaves dialogue');
+const badTalk=structuredClone(talkQuest);badTalk.scenes[0].actors[0].dialogue='missing';
+assert.throws(()=>exporter.build(badTalk));
+console.log('PASS: NPC dialogue entry, branching, conditions, effects, exit, scene travel, validation and HTML serialization');

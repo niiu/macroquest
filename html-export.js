@@ -14,6 +14,7 @@
     const quest=JSON.parse($('quest-data').textContent),variables=quest.variables||[];
     let current=quest.start,state=QuestRules.initialState(variables),imageReady=false,hoveredZone=-1;
     const saveControls=QuestSaves.attach({host:$('game-saves'),quest,getState:()=>({scene:current,state}),onLoad:saved=>{current=saved.scene;state=saved.state;$('restart-confirm').hidden=true;render();$('scene-title').focus({preventScroll:true});window.scrollTo({top:0,behavior:'auto'});}});
+    let disposeConversation=()=>{};
     const activeScene=()=>quest.scenes.find(s=>s.id===current);
     const result=choice=>QuestRules.transition(choice,variables,state);
     function element(tag,text,className){const node=document.createElement(tag);if(text!==undefined)node.textContent=text;if(className)node.className=className;return node;}
@@ -31,7 +32,7 @@
       return activeScene().choices[index]||null;
     }
     function render(){
-      const scene=activeScene();$('roll-result').textContent='';
+      disposeConversation();const scene=activeScene();$('roll-result').textContent='';
       $('scene-title').textContent=scene.title||'Без названия';$('scene-text').textContent=scene.text;
       $('choices').replaceChildren();
       for(const choice of scene.choices){
@@ -40,8 +41,8 @@
         button.disabled=!availability.ok;button.onclick=()=>take(choice);$('choices').append(button);
         if(!availability.ok)$('choices').append(element('p',availability.reason,'muted reason'));
       }
-      QuestLayers.actors($('actors'),scene,quest.characters||[]);QuestLayers.paths($('image-paths'),scene,quest.scenes,result,take);
-      $('ending').hidden=!!scene.choices.length;
+      QuestLayers.actors($('actors'),scene,quest.characters||[]);disposeConversation=QuestLayers.conversations($('actors'),scene,quest,{getState:()=>state,apply:next=>{state=next;saveControls.autosave();},travel:(id,message)=>{current=id;render();$('roll-result').textContent=message;saveControls.autosave();},refresh:render});QuestLayers.paths($('image-paths'),scene,quest.scenes,result,take);
+      $('ending').hidden=!!scene.choices.length||!!scene.actors?.some(p=>p.dialogue);
       $('no-paths').hidden=!scene.choices.length||scene.choices.some(c=>result(c).ok);
       $('state').replaceChildren();$('state-panel').hidden=!variables.length;
       for(const type of ['stat','item','flag']){
@@ -68,7 +69,7 @@
     render();
   }
   function build(project){
-    const quest={version:1,title:project.title,start:project.start,...(project.characters?.length?{characters:project.characters}:{}),variables:project.variables||[],scenes:project.scenes.map(s=>({id:s.id,title:s.title,text:s.text,...(s.actors?.length?{actors:s.actors}:{}),...(s.image?{image:s.image}:{}),choices:s.choices.map(c=>({text:c.text,target:c.target,...(c.check?{check:c.check}:{}),zone:c.zone||[],conditions:c.conditions||[],conditionMode:c.conditionMode||'all',effects:c.effects||[]}))}))};
+    const quest={version:1,title:project.title,start:project.start,...(project.characters?.length?{characters:project.characters}:{}),variables:project.variables||[],scenes:project.scenes.map(s=>({id:s.id,title:s.title,text:s.text,...(s.dialogue?{dialogue:true}:{}),...(s.actors?.length?{actors:s.actors}:{}),...(s.image?{image:s.image}:{}),choices:s.choices.map(c=>({text:c.text,target:c.target,...(c.check?{check:c.check}:{}),zone:c.zone||[],conditions:c.conditions||[],conditionMode:c.conditionMode||'all',effects:c.effects||[]}))}))};
     rules.validateVariables(quest.variables);layers.validate(quest);
     const ids=new Set(quest.scenes.map(s=>s.id));
     if(!ids.has(quest.start)||ids.size!==quest.scenes.length)throw Error('Проверьте начальную сцену и идентификаторы.');

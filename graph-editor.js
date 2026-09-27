@@ -8,7 +8,8 @@ document.querySelector('.canvas-footer').append(undoScene);
 function deleteScene(id){
   if(project.scenes.length===1)return;
   const removed=project.scenes.find(s=>s.id===id);if(!removed)return;
-  lastDeletedScene={project,scene:removed,index:project.scenes.indexOf(removed),start:project.start,paths:[]};
+  lastDeletedScene={project,scene:removed,index:project.scenes.indexOf(removed),start:project.start,paths:[],dialogues:[]};
+  for(const s of project.scenes)for(const p of s.actors||[])if(p.dialogue===id){lastDeletedScene.dialogues.push(p);delete p.dialogue;}
   for(const s of project.scenes){s.choices.forEach((c,i)=>{if(c.target===id||(c.check&&[...c.check.targets,c.check.failureTarget].includes(id)))lastDeletedScene.paths.push({source:s,choice:c,index:i});});s.choices=s.choices.filter(c=>c.target!==id&&!(c.check&&[...c.check.targets,c.check.failureTarget].includes(id)));}
   project.scenes=project.scenes.filter(s=>s!==removed);
   if(project.start===id)project.start=project.scenes[0].id;
@@ -18,6 +19,7 @@ function deleteScene(id){
 undoScene.onclick=()=>{
   const last=lastDeletedScene;if(!last||last.project!==project)return;
   project.scenes.splice(Math.min(last.index,project.scenes.length),0,last.scene);
+  for(const p of last.dialogues||[])if(!p.dialogue&&project.scenes.some(s=>s.actors?.includes(p)))p.dialogue=last.scene.id;
   for(const p of last.paths)if(project.scenes.includes(p.source)&&project.scenes.some(s=>s.id===p.choice.target)&&(!p.choice.check||[...p.choice.check.targets,p.choice.check.failureTarget].every(t=>!t||project.scenes.some(s=>s.id===t)))){
     try{QuestRules.validateChoice(p.choice,project.variables||[]);p.source.choices.splice(Math.min(p.index,p.source.choices.length),0,p.choice);}catch(e){}
   }
@@ -85,7 +87,7 @@ function renderGraph(){
   $('scene-count').textContent=project.scenes.length;$('scene-list').replaceChildren();$('nodes').replaceChildren();resizeGraph();
   project.scenes.forEach((s,i)=>{
     const item=el('button','scene-item'+(s.id===selected?' active':''));item.append(el('span','number',String(i+1).padStart(2,'0')));
-    const label=el('span','',s.title||'Без названия');label.append(el('small','',s.id===project.start?'Начальная сцена':s.choices.length?'Сцена':'Финал'));item.append(label);item.onclick=()=>select(s.id);$('scene-list').append(item);
+    const label=el('span','',s.title||'Без названия');label.append(el('small','',s.dialogue?'Диалог':s.id===project.start?'Начальная сцена':s.choices.length?'Сцена':'Финал'));item.append(label);item.onclick=()=>select(s.id);$('scene-list').append(item);
     item.draggable=true;item.title='Перетащите для изменения порядка. Alt + ↑/↓ — переместить с клавиатуры.';
     item.ondragstart=e=>{sceneDragId=s.id;e.dataTransfer.setData('text/plain',s.id);e.dataTransfer.effectAllowed='move';};
     item.ondragover=e=>{if(sceneDragId){e.preventDefault();e.dataTransfer.dropEffect='move';}};
@@ -94,7 +96,7 @@ function renderGraph(){
     const node=el('div','node'+(s.id===selected?' selected':''));node.style.left=s.x+'px';node.style.top=s.y+'px';node.dataset.sceneId=s.id;
     node.style.minHeight=nodeHeight(s)+'px';
     const card=el('button','node-card');card.setAttribute('aria-label','Редактировать: '+s.title);
-    const top=el('div','node-top',s.id===project.start?'⚑ НАЧАЛО':s.choices.length?'◇ СЦЕНА':'✦ ФИНАЛ');top.append(el('span','',String(i+1).padStart(2,'0')));
+    const top=el('div','node-top',s.dialogue?'☏ ДИАЛОГ':s.id===project.start?'⚑ НАЧАЛО':s.choices.length?'◇ СЦЕНА':'✦ ФИНАЛ');top.append(el('span','',String(i+1).padStart(2,'0')));
     const body=el('div','node-body');body.append(el('h3','',s.title||'Без названия'),el('p','',s.text||'Здесь начинается история…'),el('div','node-count',`${s.choices.length} переходов${s.image?' · ▧ картинка':''}`));card.append(top,body);
     card.onclick=()=>{if(performance.now()<Number(node.dataset.suppressUntil||0))return;if(connectionSource)completeConnection(s.id);else select(s.id);};
     card.onpointerdown=e=>{if(!connectionSource)dragScene(e,s,node,card);};

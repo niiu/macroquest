@@ -3,7 +3,7 @@
   'use strict';
   function questKey(quest){
     // Ignore editor coordinates; include the playable version, with normalized defaults.
-    const data=JSON.stringify({title:quest.title,start:quest.start,...(quest.characters?.length?{characters:quest.characters}:{}),variables:quest.variables||[],scenes:quest.scenes.map(s=>({id:s.id,title:s.title,text:s.text,...(s.actors?.length?{actors:s.actors}:{}),image:s.image||'',choices:s.choices.map(c=>({text:c.text,target:c.target,...(c.check?{check:c.check}:{}),zone:c.zone||[],conditions:c.conditions||[],conditionMode:c.conditionMode||'all',effects:c.effects||[]}))}))});
+    const data=JSON.stringify({title:quest.title,start:quest.start,...(quest.characters?.length?{characters:quest.characters}:{}),variables:quest.variables||[],scenes:quest.scenes.map(s=>({id:s.id,title:s.title,text:s.text,...(s.dialogue?{dialogue:true}:{}),...(s.actors?.length?{actors:s.actors}:{}),image:s.image||'',choices:s.choices.map(c=>({text:c.text,target:c.target,...(c.check?{check:c.check}:{}),zone:c.zone||[],conditions:c.conditions||[],conditionMode:c.conditionMode||'all',effects:c.effects||[]}))}))});
     let a=2166136261,b=2246822507;
     for(let i=0;i<data.length;i++){const c=data.charCodeAt(i);a=Math.imul(a^c,16777619);b=Math.imul(b^c,3266489909);}
     return (a>>>0).toString(16).padStart(8,'0')+(b>>>0).toString(16).padStart(8,'0')+'-'+data.length;

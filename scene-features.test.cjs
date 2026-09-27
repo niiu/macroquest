@@ -42,3 +42,12 @@ const original=JSON.stringify(graphContext.project);graphContext.removeScene('lo
 graphContext.removeScene('failure');assert.equal(graphContext.project.scenes[0].choices.length,0);graphContext.restoreScene();assert.equal(JSON.stringify(graphContext.project),original);
 graphContext.reorder('crit','low');assert.equal(graphContext.project.scenes[0].id,'crit');assert.equal(graphContext.project.start,'low');
 console.log('PASS: all D20 faces, boundaries, empty bands fail, success-only effects, blocked rolls, layers, HTML round trip, save identity, scene deletion/undo, ordering');
+
+const talkScene=graphContext.project.scenes.find(s=>s.id==='mid');talkScene.dialogue=true;
+const talkPlacement=graphContext.project.scenes.find(s=>s.id==='low').actors[0];talkPlacement.dialogue='mid';
+layers.validate(graphContext.project);
+const talkExport=JSON.parse(html.build(graphContext.project).match(/<script id="quest-data" type="application\/json">([\s\S]*?)<\/script>/)[1]);
+assert.equal(saves.questKey(graphContext.project),saves.questKey(talkExport),'dialogues preserve cross-format saves');
+graphContext.removeScene('mid');assert.equal(talkPlacement.dialogue,undefined);layers.validate(graphContext.project);
+graphContext.restoreScene();assert.equal(talkPlacement.dialogue,'mid');layers.validate(graphContext.project);
+console.log('PASS: dialogue references removed/restored with scene and save identity matches HTML');

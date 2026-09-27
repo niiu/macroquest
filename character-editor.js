@@ -57,6 +57,13 @@ function renderCharacters(){
   (scene().actors||[]).forEach((placement,index)=>{
     const character=(project.characters||[]).find(c=>c.id===placement.character);if(!character)return;
     const row=el('div','actor-row');row.append(el('span','',`${index+1}. ${character.name}`));
+    const dialogue=el('select');dialogue.setAttribute('aria-label','Диалог слоя '+(index+1));
+    const none=el('option','','Без диалога');none.value='';dialogue.append(none);
+    for(const node of project.scenes.filter(s=>s.dialogue)){const option=el('option','',node.title||'Реплика');option.value=node.id;dialogue.append(option);}
+    dialogue.value=placement.dialogue||'';dialogue.onchange=()=>{if(dialogue.value)placement.dialogue=dialogue.value;else delete placement.dialogue;save();renderInspector();};
+    const createDialogue=el('button','','+ Диалог');createDialogue.onclick=()=>{if(project.scenes.length>=500){$('character-status').textContent='Максимум 500 сцен.';return;}const previous=selected;$('add-scene').onclick();if(selected===previous)return;scene().dialogue=true;scene().title='Диалог: '+character.name;scene().text='Приветствую, путник.';placement.dialogue=selected;save();renderGraph();renderInspector();};
+    const editDialogue=el('button','','Открыть диалог');editDialogue.disabled=!placement.dialogue;editDialogue.onclick=()=>select(placement.dialogue);
+    row.append(el('span','','Разговор при клике:'),dialogue,createDialogue,editDialogue);
     const selector=pictureSelect(character,placement.imageId,'Картинка слоя '+(index+1)+' · '+character.name,id=>{placement.imageId=id;save();renderActorLayers();});
     const label=el('label','','Размер '),size=el('input');size.type='range';size.min='2';size.max='100';size.value=placement.width*100;size.setAttribute('aria-label','Размер слоя '+(index+1));size.oninput=()=>{placement.width=Number(size.value)/100;renderActorLayers();};size.onchange=save;label.append(size);
     const up=el('button','','На передний план');up.disabled=index===scene().actors.length-1;up.onclick=()=>{scene().actors.splice(index,1);scene().actors.push(placement);save();renderCharacters();};
