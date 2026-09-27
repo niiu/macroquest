@@ -71,7 +71,9 @@ assert.equal(get('scene-title').textContent,'Начало','locked zone cannot b
 const broken=JSON.parse(JSON.stringify(project));broken.scenes[0].choices[0].target='missing';
 assert.throws(()=>exporter.build(broken));
 const layered=structuredClone(project);layered.characters=[{id:'hero',name:'Герой',image:'data:image/png;base64,aGVsbG8='}];
+layered.characters[0].images=[{id:'happy',name:'Улыбка',image:'data:image/png;base64,dGVzdA=='}];
 layered.scenes[0].image=layered.characters[0].image;layered.scenes[0].actors=[{character:'hero',x:.5,y:.9,width:.25}];
+layered.scenes[0].actors.push({character:'hero',imageId:'happy',x:.8,y:.9,width:.2});
 layered.scenes[0].choices[0].check={targets:['','end','end','end','end'],failureTarget:'door'};
 const layeredHTML=exporter.build(layered),layeredData=JSON.parse(layeredHTML.match(/<script id="quest-data" type="application\/json">([\s\S]*?)<\/script>/)[1]);
 const layeredSource=layeredHTML.match(/<script>([\s\S]*?)<\/script>/)[1];
@@ -79,6 +81,8 @@ elements.clear();get('quest-data').textContent=JSON.stringify(layeredData);conte
 vm.runInNewContext(layeredSource,context);
 assert.equal(get('choices').children.length,0,'painted paths are not duplicated below the image');
 assert.equal(get('actors').children[0].alt,'Герой');
+assert.equal(get('actors').children[0].src,layered.characters[0].image,'legacy placement uses main image');
+assert.equal(get('actors').children[1].src,layered.characters[0].images[0].image,'each placement uses its own picture in exported HTML');
 get('image-paths').children[0].onclick();
 assert.equal(get('scene-title').textContent,'Дверь','empty D20 band enters failure scene');
 assert.equal(get('choices').children.find(e=>e.onclick).disabled,true,'failure grants neither item nor flag');

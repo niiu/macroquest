@@ -18,6 +18,9 @@ const image='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJA
 const project={version:1,title:'Проверка слоёв',start:'low',variables,characters:[{id:'actor',name:'Путник',image}],scenes:['low','mid','crit','failure','success'].map(id=>({id,title:id,text:'',x:0,y:0,choices:[]}))};
 project.scenes[0].image=image;project.scenes[0].actors=[{character:'actor',x:.5,y:.9,width:.3}];project.scenes[0].choices=[choice];
 layers.validate(project);
+const variants=structuredClone(project);variants.characters[0].images=[{id:'pose',name:'Поза',image}];variants.scenes[0].actors[0].imageId='pose';layers.validate(variants);
+variants.scenes[0].actors[0].imageId='missing';assert.throws(()=>layers.validate(variants));
+variants.scenes[0].actors[0].imageId='pose';variants.characters[0].images.push({...variants.characters[0].images[0]});assert.throws(()=>layers.validate(variants));
 assert.throws(()=>layers.validate({...project,characters:[]}));
 const bad=structuredClone(project);bad.scenes[0].actors[0].width=-1;assert.throws(()=>layers.validate(bad));
 const exported=html.build(project),data=JSON.parse(exported.match(/<script id="quest-data" type="application\/json">([\s\S]*?)<\/script>/)[1]);

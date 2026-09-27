@@ -52,3 +52,4 @@ body.editor-docked .graph-section{height:530px}
 body.sidebar-collapsed .workspace{grid-template-columns:minmax(0,1fr)}.sidebar[hidden]{display:none!important}.sidebar-toggle{flex-shrink:0;width:36px;height:36px;padding:0;font-size:21px;color:var(--accent)}.topbar{gap:16px}@media(max-width:720px){.topbar{gap:8px}.sidebar-toggle{width:32px;height:32px}.topbar .brand strong{font-size:10px}}
 body.sidebar-collapsed #editor-dock{grid-column:1}
 body.sidebar-collapsed .graph-section{grid-column:1;grid-row:1}
+.character-card select,.actor-row select{width:100%;min-width:0;padding:7px;background:#20271f;color:var(--text);border:1px solid #526047;border-radius:4px}.character-card small{width:100%}
