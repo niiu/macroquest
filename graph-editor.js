@@ -173,10 +173,22 @@ function setConnectionStatus(){
     const label=connectionSource?'Подключить к сцене: '+target.title:input.dataset.restLabel;
     input.setAttribute('aria-label',label);input.title=label;
   }
-  $('graph-status').textContent=connectionSource?`Из «${connectionSource.title}»: выберите сцену назначения. Esc — отмена.`:'Крестик у входа — отключить путь · Клик по пути — условия';
+  $('graph-status').textContent=connectionSource?`Из «${connectionSource.title}»: выберите сцену или отпустите путь на пустом поле для создания новой. Esc — отмена.`:'Крестик у входа — отключить путь · Клик по пути — условия';
 }
 function cancelConnection(){connectionSource=null;connectionPointer=null;cancelAnimationFrame(connectionFrame);connectionFrame=0;$('connection-preview').replaceChildren();setConnectionStatus();}
 function completeConnection(target){const source=connectionSource;cancelConnection();if(source&&project.scenes.includes(source))openPathEditor(source,null,target);}
+function createConnectedScene(clientX,clientY){
+  const source=connectionSource;cancelConnection();
+  if(!source||!project.scenes.includes(source))return;
+  if(project.scenes.length>=500){$('graph-status').textContent='Максимум 500 сцен. Новая сцена не создана.';return;}
+  const rect=$('graph').getBoundingClientRect();
+  const position=QuestGraphArea.position(QuestGraphArea.bounds(project,nodeHeight),(clientX-rect.left)/zoom-110,(clientY-rect.top)/zoom-76);
+  const next={id:'s'+crypto.randomUUID(),title:source.dialogue?'Следующая реплика':'Новая сцена',text:'',...position,choices:[]};
+  if(source.dialogue){next.dialogue=true;next.speaker=source.speaker||'';QuestLayers.inheritArtwork(source,next);}
+  const choice={text:source.dialogue?'Продолжить разговор':'Перейти в новую сцену',target:next.id,zone:[]};
+  project.scenes.push(next);source.choices.push(choice);activeChoice=source.choices.length-1;
+  save();renderGraph();renderInspector();openPathEditor(source,choice);
+}
 function connectionLine(x,y){
   if(!connectionSource)return;const r=$('graph').getBoundingClientRect(),tx=(x-r.left)/zoom,ty=(y-r.top)/zoom,s=connectionSource;
   $('connection-preview').replaceChildren(svgEl('path',{d:`M ${s.x+220} ${s.y+76} C ${s.x+290} ${s.y+76}, ${tx-70} ${ty}, ${tx} ${ty}`,fill:'none',stroke:'#d7e8a6','stroke-width':2,'stroke-dasharray':'6 4'}));
@@ -195,7 +207,12 @@ function beginConnection(e,s,port){
   const end=ev=>{port.onpointermove=port.onpointerup=port.onpointercancel=null;connectionPointer=null;cancelAnimationFrame(connectionFrame);connectionFrame=0;
     if(port.hasPointerCapture(e.pointerId))port.releasePointerCapture(e.pointerId);
     if(ev.type==='pointercancel'){cancelConnection();return;}
-    if(moved){const target=document.elementFromPoint(ev.clientX,ev.clientY)?.closest('[data-scene-id]');if(target)completeConnection(target.dataset.sceneId);else cancelConnection();}
+    if(moved){
+      const hit=document.elementFromPoint(ev.clientX,ev.clientY),target=hit?.closest('[data-scene-id]');
+      if(target)completeConnection(target.dataset.sceneId);
+      else if(hit&&['graph','graph-space','nodes','edges'].includes(hit.id))createConnectedScene(ev.clientX,ev.clientY);
+      else cancelConnection();
+    }
   };
   port.onpointerup=end;port.onpointercancel=end;
 }

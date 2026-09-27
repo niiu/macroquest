@@ -79,3 +79,38 @@ assert.equal(actorLink.dialogue,undefined);assert.equal(linkQuest.scenes[0].acto
 linkContext.undoDisconnect.onclick();assert.equal(actorLink.dialogue,'mid');
 assert.equal(linkContext.incomingPaths('mid').filter(p=>p.actor).length,1);
 console.log('PASS: graph NPC dialogue connections, dedicated incoming port, disconnect and undo retain actor');
+
+const graphFull=fs.readFileSync('graph-editor.js','utf8');
+const dragCode=graphFull.slice(graphFull.indexOf('function completeConnection('),graphFull.indexOf('function connectionLine('))+
+graphFull.slice(graphFull.indexOf('function beginConnection('),graphFull.indexOf("$('graph-viewport').addEventListener('pointermove'"));
+let hitElement={id:'graph',closest(){return null;}},openedPath=null,idCounter=0;
+const dragQuest=structuredClone(project);dragQuest.graphSize={width:3000,height:2000};dragQuest.scenes[0].dialogue=true;dragQuest.scenes[0].speaker='Путник';
+const dragContext={project:dragQuest,selected:'low',activeChoice:0,zoom:.5,connectionSource:null,connectionPointer:null,connectionFrame:0,
+  crypto:{randomUUID:()=>String(++idCounter)},QuestGraphArea:require('./graph-area.js'),QuestLayers:layers,nodeHeight:()=>154,
+  $:id=>id==='graph'?{getBoundingClientRect:()=>({left:100,top:50})}:get(id),
+  document:{elementFromPoint:()=>hitElement},cancelAnimationFrame(){},connectionLine(){},autoPanConnection(){},setConnectionStatus(){},
+  save(){},renderGraph(){},renderInspector(){},openPathEditor:(...args)=>{openedPath=args;},
+  cancelConnection(){dragContext.connectionSource=null;dragContext.connectionPointer=null;}
+};
+vm.runInNewContext(dragCode,dragContext);
+function dragTo(hit,type='pointerup',move=true){
+  hitElement=hit;const port={setPointerCapture(){},hasPointerCapture:()=>true,releasePointerCapture(){}};
+  dragContext.beginConnection({button:0,clientX:200,clientY:150,pointerId:1,stopPropagation(){},preventDefault(){}},dragQuest.scenes[0],port);
+  if(move)port.onpointermove({clientX:500,clientY:300});
+  port.onpointerup({type,clientX:500,clientY:300});
+}
+let sceneCount=dragQuest.scenes.length;
+dragTo({id:'nodes',closest:()=>null});
+assert.equal(dragQuest.scenes.length,sceneCount+1);
+const newReply=dragQuest.scenes.at(-1),newPath=dragQuest.scenes[0].choices.at(-1);
+assert.equal(newReply.x,690);assert.equal(newReply.y,424);
+assert.equal(newReply.dialogue,true);assert.equal(newReply.image,dragQuest.scenes[0].image);
+assert.equal(newPath.target,newReply.id);assert.equal(openedPath[1],newPath,'new path opens with editable conditions');
+sceneCount=dragQuest.scenes.length;
+dragTo({id:'graph',closest:()=>null},'pointercancel');assert.equal(dragQuest.scenes.length,sceneCount);
+dragTo({id:'graph',closest:()=>null},'pointerup',false);assert.equal(dragQuest.scenes.length,sceneCount);
+dragTo({id:'toolbar',closest:()=>null});assert.equal(dragQuest.scenes.length,sceneCount);
+dragTo({id:'',closest:()=>({dataset:{sceneId:'mid'}})});assert.equal(dragQuest.scenes.length,sceneCount);assert.equal(openedPath[2],'mid');
+while(dragQuest.scenes.length<500)dragQuest.scenes.push({id:'limit'+dragQuest.scenes.length,x:0,y:0,choices:[]});
+dragTo({id:'graph',closest:()=>null});assert.equal(dragQuest.scenes.length,500);
+console.log('PASS: drop on empty graph creates scene and path, zoom coordinates, dialogue artwork, cancel/outside/existing/limit');
