@@ -3,14 +3,26 @@ let pathDraft=null;
 function variables(){return project.variables||[];}
 function appendOptions(select,entries){for(const [value,label] of entries){const option=el('option','',label);option.value=value;select.append(option);}return select;}
 function openPathEditor(source,choice=null,target=null){
-  cancelConnection();pathDraft={source,original:choice,conditions:structuredClone(choice?.conditions||[]),effects:structuredClone(choice?.effects||[])};
+  cancelConnection();pathDraft={source,original:choice,sceneTitles:new Map(),conditions:structuredClone(choice?.conditions||[]),effects:structuredClone(choice?.effects||[])};
   $('path-heading').textContent=choice?'Редактирование перехода':'Новый переход';$('path-source').textContent='Из сцены: '+source.title;
   $('path-text').value=choice?.text||'Перейти в '+(project.scenes.find(s=>s.id===target)?.title||'сцену');
   $('path-target').replaceChildren();appendOptions($('path-target'),project.scenes.map(s=>[s.id,s.title||'Без названия']));$('path-target').value=choice?.target||target||source.id;
+  renderPathSceneTitle();
   $('condition-mode').value=choice?.conditionMode||'all';$('delete-path').hidden=!choice;$('delete-path').textContent='Удалить путь';$('path-error').textContent='';
   pathDraft.check=choice?.check?structuredClone(choice.check):null;$('path-dice').checked=!!pathDraft.check;renderDiceTargets();
   renderConditions();renderEffects();$('path-dialog').showModal();
 }
+function renderPathSceneTitle(){
+  if(!pathDraft)return;
+  const id=$('path-target').value,target=project.scenes.find(s=>s.id===id);
+  $('path-scene-title').value=pathDraft.sceneTitles.get(id)??target?.title??'';
+}
+$('path-target').onchange=renderPathSceneTitle;
+$('path-scene-title').oninput=e=>{
+  if(!pathDraft)return;
+  const id=$('path-target').value;pathDraft.sceneTitles.set(id,e.target.value);
+  for(const option of $('path-target').options)if(option.value===id)option.textContent=e.target.value||'Без названия';
+};
 function closePathEditor(){$('path-dialog').close();pathDraft=null;}
 $('close-path').onclick=$('cancel-path').onclick=closePathEditor;
 $('path-dialog').addEventListener('cancel',()=>{pathDraft=null;});
@@ -51,6 +63,7 @@ $('path-form').onsubmit=e=>{
     if(data.check&&[...data.check.targets,data.check.failureTarget].some(t=>t&&!project.scenes.some(s=>s.id===t)))throw Error('Выход проверки ссылается на удалённую сцену.');
     if(original){if(!source.choices.includes(original))throw Error('Путь больше не существует.');Object.assign(original,data);}
     else source.choices.push({...data,zone:[]});
+    for(const [id,title] of pathDraft.sceneTitles){const target=project.scenes.find(s=>s.id===id);if(target)target.title=title.trim();}
     selected=source.id;activeChoice=original?source.choices.indexOf(original):source.choices.length-1;
     closePathEditor();save();renderGraph();renderInspector();
   }catch(error){$('path-error').textContent=error.message;}
