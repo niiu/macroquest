@@ -5,6 +5,10 @@ const files = new Set(['index.html', 'demo-quest.json', 'app.js', 'image-editor.
 const types = {'.html':'text/html', '.json':'application/json', '.js':'text/javascript', '.css':'text/css'};
 http.createServer((request, response) => {
   const name = new URL(request.url, 'http://localhost').pathname.slice(1) || 'index.html';
+  if (name === '__macroquest/health') {
+    response.writeHead(200, {'Content-Type':'application/json', 'X-Macroquest-App':'macroquest', 'Cache-Control':'no-store'});
+    response.end(JSON.stringify({app:'macroquest',version:'0.1.0'})); return;
+  }
   if (!files.has(name)) { response.writeHead(404); response.end('Not found'); return; }
   response.writeHead(200, {'Content-Type':types[path.extname(name)]+'; charset=utf-8', 'Cache-Control':'no-store'});
   fs.createReadStream(path.join(__dirname,name)).pipe(response);
