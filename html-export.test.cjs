@@ -127,11 +127,16 @@ assert.throws(()=>exporter.build(badTalk));
 console.log('PASS: NPC dialogue entry, branching, conditions, effects, exit, scene travel, validation and HTML serialization');
 
 const autoQuest=structuredClone(talkQuest);autoQuest.start='hello';autoQuest.scenes.find(s=>s.id==='hello').speaker='Странник';
+autoQuest.scenes.find(s=>s.id==='hello').image=layered.characters[0].image;
+autoQuest.scenes.find(s=>s.id==='hello').actors=[{character:'hero',imageId:'happy',x:.5,y:.9,width:.3}];
 const autoHTML=exporter.build(autoQuest),autoSource=autoHTML.match(/<script>([\s\S]*?)<\/script>/)[1];
 elements.clear();get('quest-data').textContent=autoHTML.match(/<script id="quest-data" type="application\/json">([\s\S]*?)<\/script>/)[1];
 vm.runInNewContext(autoSource,context);
 let inline=get('choices').children[0];assert.equal(inline.className,'conversation conversation-inline');assert.equal(inline.children[0].textContent,'Странник');
 assert.equal(get('scene-text').hidden,true);
+assert.equal(get('image-wrap').hidden,false,'dialogue scene displays background');
+assert.equal(get('actors').children[0].src,layered.characters[0].images[0].image,'dialogue scene displays selected character layer');
+assert.equal(get('zones').style.pointerEvents,'none','dialogue artwork does not intercept answers');
 inline.children.find(e=>e.textContent==='Дай ключ').onclick();
 assert.equal(get('scene-title').textContent,'Ответ','automatic dialogue advances actual saved scene');
 inline=get('choices').children[0];assert.equal(inline.children[1].textContent,'Держи ключ.');

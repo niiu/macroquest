@@ -35,13 +35,13 @@
   const onImage=choice=>(choice.zone||[]).some(s=>s.mode==='paint');
   function anchor(choice){const strokes=(choice.zone||[]).filter(s=>s.mode==='paint');const p=strokes[0]?.points[0]||[.5,.5];return {x:Math.max(.1,Math.min(.9,p[0])),y:Math.max(.08,Math.min(.92,p[1]))};}
   function paths(host,scene,scenes,result,take){
-    host.replaceChildren();if(!scene.image)return;
+    host.replaceChildren();if(!scene.image||scene.dialogue)return;
     for(const c of scene.choices){if(!onImage(c))continue;const target=scenes.find(s=>s.id===c.target),r=result(c),p=anchor(c);const destination=c.check?'🎲 D20':target?.title||'Без названия';
       const button=document.createElement('button');button.className='image-path';button.textContent=(r.ok?'':'🔒 ')+c.text+' → '+destination;button.title=c.text+(r.ok?'':' · '+r.reason);button.setAttribute('aria-label',c.text+' → '+destination+(r.ok?'':' · '+r.reason));button.disabled=!r.ok;button.style.left=p.x*100+'%';button.style.top=p.y*100+'%';button.onclick=()=>take(c);host.append(button);
     }
   }
   const css='.actor-layer,.image-paths{position:absolute;inset:0;pointer-events:none}.image-surface .scene-actor{position:absolute;height:auto;transform:translate(-50%,-100%);max-height:100%;object-fit:contain;border-radius:0;pointer-events:none}.image-path{position:absolute;transform:translate(-50%,-50%);pointer-events:auto;max-width:42%;font:12px/1.3 system-ui;padding:7px 10px;background:#1a241ded;color:#e7efd9;border:1px solid #b4c78c;border-radius:6px;overflow-wrap:anywhere}.image-path{opacity:0;pointer-events:none}.image-path:focus-visible{opacity:1;pointer-events:auto}.image-paths{z-index:4}.actor-layer{z-index:1}';
-  function hover(host,scene,index){let n=0;scene.choices.forEach((c,i)=>{if(onImage(c)){host.children[n++].style.opacity=i===index?'1':'';}});}
+  function hover(host,scene,index){if(scene.dialogue)return;let n=0;scene.choices.forEach((c,i)=>{if(onImage(c)){host.children[n++].style.opacity=i===index?'1':'';}});}
   // Both players use this conversation controller; effects go through the normal rules engine.
   function conversations(host,scene,quest,{getState,apply,travel,refresh,autoHost}){
     let panel=null;

@@ -109,11 +109,12 @@ $('play').onclick=()=>{startPlayer();$('player').showModal();};$('close-player')
 function renderDialogueEditor(){
   const s=scene(),on=!!s.dialogue;
   $('dialogue-editor').hidden=!on;$('dialogue-mode-hint').hidden=!on;
-  document.querySelector('.editor-tabs').hidden=on;
   (on?$('dialogue-answers'):$('scene-choices-home')).append($('choices'));
   $('dialogue-title').value=s.title;$('dialogue-speaker').value=s.speaker||'';$('dialogue-text').value=s.text;
-  if(on)for(const panel of document.querySelectorAll('[data-editor-panel]'))panel.hidden=true;
-  else{const tab=document.querySelector('[data-editor-tab][aria-pressed="true"]');setSceneTab(tab?.dataset.editorTab||'text');}
+  $('zone-status').hidden=on;document.querySelector('.paint-toolbar').hidden=on;$('zone-canvas').style.pointerEvents=on?'none':'';
+  document.querySelector('.image-heading h2').textContent=on?'Картинка и персонажи':'Изображение и зоны выбора';
+  document.querySelector('.image-heading .hint').textContent=on?'Добавьте фон и разместите персонажей поверх него. Ответы игрока отображаются под картинкой.':'Выберите действие и закрасьте его область кистью.';
+  setSceneTab('text');
 }
 $('dialogue-title').oninput=e=>{scene().title=e.target.value;$('scene-heading').textContent=e.target.value;save();renderGraph();};
 $('dialogue-speaker').oninput=e=>{scene().speaker=e.target.value;save();};

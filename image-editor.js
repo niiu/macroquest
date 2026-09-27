@@ -20,7 +20,7 @@ function syncZoneTools(){
 function paintZones(){
   const canvas=$('zone-canvas');
   if(!imageReady)return;
-  QuestZones.draw(canvas,$('show-zones').checked?scene().choices:[],activeChoice);
+  QuestZones.draw(canvas,!scene().dialogue&&$('show-zones').checked?scene().choices:[],activeChoice);
 }
 function renderImageEditor(){
   finishStroke(false);imageReady=false;$('brush-cursor').hidden=true;
@@ -107,15 +107,15 @@ $('remove-image').onclick=()=>{
 };
 
 function renderPlayerImage(s){
-  playerHoveredZone=-1;playerImageReady=false;$('play-image-wrap').hidden=!s.image||!!s.dialogue;QuestLayers.actors($('play-actors'),s,project.characters||[]);
-  $('play-hotspot').textContent='Выберите область на изображении';$('play-zone-canvas').style.cursor='default';
+  playerHoveredZone=-1;playerImageReady=false;$('play-image-wrap').hidden=!s.image;QuestLayers.actors($('play-actors'),s,project.characters||[]);$('play-zone-canvas').style.pointerEvents=s.dialogue?'none':'';$('play-hotspot').textContent=s.dialogue?'Выберите ответ под изображением':'Выберите область на изображении';
+  $('play-hotspot').textContent=s.dialogue?'Выберите ответ под изображением':'Выберите область на изображении';$('play-zone-canvas').style.cursor='default';
   const img=$('play-image'),canvas=$('play-zone-canvas');canvas.getContext('2d').clearRect(0,0,canvas.width,canvas.height);
   img.onload=()=>{if(playing!==s.id)return;canvas.width=img.naturalWidth;canvas.height=img.naturalHeight;playerImageReady=true;drawPlayerZones();};
   img.onerror=()=>{playerImageReady=false;$('play-image-wrap').dataset.failed='true';renderPlayerChoices();$('play-hotspot').textContent='Картинка недоступна. Используйте кнопки действий.';};
   if(s.image)img.src=s.image;else img.removeAttribute('src');
 }
 let playerHoveredZone=-1;
-function drawPlayerZones(){if(playerImageReady)QuestZones.draw($('play-zone-canvas'),$('play-show-zones').checked?project.scenes.find(s=>s.id===playing).choices:project.scenes.find(s=>s.id===playing).choices.map((c,i)=>i===playerHoveredZone?c:{zone:[]}),playerHoveredZone);}
+function drawPlayerZones(){if(project.scenes.find(s=>s.id===playing)?.dialogue)return;if(playerImageReady)QuestZones.draw($('play-zone-canvas'),$('play-show-zones').checked?project.scenes.find(s=>s.id===playing).choices:project.scenes.find(s=>s.id===playing).choices.map((c,i)=>i===playerHoveredZone?c:{zone:[]}),playerHoveredZone);}
 function playerHit(e){if(!playerImageReady)return -1;const canvas=$('play-zone-canvas'),p=pointerPoint(e,canvas);return QuestZones.hit(project.scenes.find(s=>s.id===playing).choices,p[0],p[1],canvas.width,canvas.height);}
 $('play-zone-canvas').onpointermove=e=>{const i=playerHit(e),c=project.scenes.find(s=>s.id===playing).choices[i],result=c?choiceResult(c):null;if(playerHoveredZone!==i){playerHoveredZone=i;drawPlayerZones();}QuestLayers.hover($('play-image-paths'),project.scenes.find(s=>s.id===playing),i);$('play-zone-canvas').style.cursor=!c?'default':result.ok?'pointer':'not-allowed';$('play-hotspot').textContent=!c?'Выберите область на изображении':result.ok?'→ '+(project.scenes.find(s=>s.id===c.target)?.title||'')+' · '+c.text:'🔒 '+c.text+' · '+result.reason;};
 $('play-zone-canvas').onpointerleave=()=>{playerHoveredZone=-1;drawPlayerZones();QuestLayers.hover($('play-image-paths'),project.scenes.find(s=>s.id===playing),-1);$('play-zone-canvas').style.cursor='default';$('play-hotspot').textContent='Выберите область на изображении';};

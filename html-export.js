@@ -22,7 +22,7 @@
       const next=QuestRules.resolve(choice,variables,state);if(!next.ok)return;
       state=next.state;current=next.target||current;render();$('roll-result').textContent=next.roll?.message||'';saveControls.autosave();$('scene-title').focus({preventScroll:true});window.scrollTo({top:0,behavior:'auto'});
     }
-    function drawZones(){if(imageReady)QuestZones.draw($('zones'),$('show-zones').checked?activeScene().choices:activeScene().choices.map((c,i)=>i===hoveredZone?c:{zone:[]}),hoveredZone);}
+    function drawZones(){if(activeScene().dialogue)return;if(imageReady)QuestZones.draw($('zones'),$('show-zones').checked?activeScene().choices:activeScene().choices.map((c,i)=>i===hoveredZone?c:{zone:[]}),hoveredZone);}
     function hit(event){
       if(!imageReady)return null;
       const canvas=$('zones'),r=canvas.getBoundingClientRect();
@@ -52,11 +52,11 @@
         for(const v of entries){list.append(element('dt',v.name),element('dd',type==='flag'?(state[v.id]?'Включён':'Выключен'):String(state[v.id])+(type==='item'?' шт.':'')));}
         group.append(list);$('state').append(group);
       }
-      hoveredZone=-1;imageReady=false;$('image-wrap').hidden=!scene.image||!!scene.dialogue;$('image-error').hidden=true;
-      $('hotspot').textContent='Нажмите на область изображения или выберите действие ниже.';$('zones').style.cursor='default';
+      hoveredZone=-1;imageReady=false;$('image-wrap').hidden=!scene.image;$('image-error').hidden=true;
+      $('hotspot').textContent=scene.dialogue?'Выберите ответ под изображением':'Нажмите на область изображения или выберите действие ниже.';$('zones').style.cursor='default';$('zones').style.pointerEvents=scene.dialogue?'none':'';
       const image=$('image'),canvas=$('zones');canvas.getContext('2d').clearRect(0,0,canvas.width,canvas.height);
       image.onload=()=>{if(activeScene()!==scene)return;canvas.width=image.naturalWidth;canvas.height=image.naturalHeight;imageReady=true;drawZones();};
-      image.onerror=()=>{if(activeScene()!==scene)return;imageReady=false;$('image-wrap').hidden=true;$('image-error').hidden=false;for(const c of scene.choices.filter(QuestLayers.onImage)){const b=element('button',c.text,'choice');b.disabled=!result(c).ok;b.onclick=()=>take(c);$('choices').append(b);}};
+      image.onerror=()=>{if(activeScene()!==scene)return;imageReady=false;$('image-wrap').hidden=true;$('image-error').hidden=false;for(const c of scene.choices.filter(c=>!scene.dialogue&&QuestLayers.onImage(c))){const b=element('button',c.text,'choice');b.disabled=!result(c).ok;b.onclick=()=>take(c);$('choices').append(b);}};
       if(scene.image){image.alt=scene.title||'Локация';image.src=scene.image;}else image.removeAttribute('src');
     }
     $('zones').onclick=e=>{const choice=hit(e);if(choice)take(choice);};

@@ -61,16 +61,13 @@ function updateEditorPlacement(){
   document.body.classList.toggle('editor-docked',docked);
 }
 function setSceneTab(name){
-  for(const panel of document.querySelectorAll('[data-editor-panel]'))panel.hidden=panel.dataset.editorPanel!==name;
-  for(const button of document.querySelectorAll('[data-editor-tab]'))button.setAttribute('aria-pressed',String(button.dataset.editorTab===name));
-  if(name==='image')paintZones();
-  if(scene().dialogue){for(const panel of document.querySelectorAll('[data-editor-panel]'))panel.hidden=true;}
+  for(const panel of document.querySelectorAll('[data-editor-panel]'))panel.hidden=!!scene().dialogue&&panel.dataset.editorPanel!=='image';
+  if(name==='image'){paintZones();document.querySelector('[data-editor-panel="image"]').scrollIntoView({block:'nearest',behavior:'smooth'});}
 }
 function openSceneEditor(){
   if(isEditorDocked())$('scene-editor').scrollIntoView({behavior:'smooth',block:'start'});
   else if(!$('scene-dialog').open)$('scene-dialog').showModal();
 }
-for(const button of document.querySelectorAll('[data-editor-tab]'))button.onclick=()=>setSceneTab(button.dataset.editorTab);
 $('dock-editor').onchange=e=>{dockPreference=e.target.checked;try{localStorage.setItem('macroquest.dock-editor',String(dockPreference));}catch(e){}updateEditorPlacement();};
 $('close-scene-editor').onclick=()=>$('scene-dialog').close();
 $('graph-add-scene').onclick=()=>$('add-scene').click();
