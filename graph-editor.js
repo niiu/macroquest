@@ -187,7 +187,7 @@ function createConnectedScene(clientX,clientY){
   if(source.dialogue){next.dialogue=true;next.speaker=source.speaker||'';QuestLayers.inheritArtwork(source,next);}
   const choice={text:source.dialogue?'Продолжить разговор':'Перейти в новую сцену',target:next.id,zone:[]};
   project.scenes.push(next);source.choices.push(choice);activeChoice=source.choices.length-1;
-  save();renderGraph();renderInspector();openPathEditor(source,choice);
+  save();renderGraph();renderInspector();openPathEditor(source,choice,next.id,true);
 }
 function connectionLine(x,y){
   if(!connectionSource)return;const r=$('graph').getBoundingClientRect(),tx=(x-r.left)/zoom,ty=(y-r.top)/zoom,s=connectionSource;
