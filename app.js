@@ -42,7 +42,7 @@ window.addEventListener('beforeunload',e=>{if(pendingSaves||saveFailed){e.preven
 function el(tag,cls,text){const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n;}
 function setEditorOpen(open){$('editor-body').hidden=!open;$('collapse-editor').textContent=open?'Свернуть ↓':'Открыть редактор ↑';$('collapse-editor').setAttribute('aria-expanded',String(open));}
 $('collapse-editor').onclick=()=>setEditorOpen($('editor-body').hidden);
-function select(id){selected=id;activeChoice=0;setEditorOpen(true);renderGraph();renderInspector();openSceneEditor();}
+function select(id){$('next-new-location').checked=false;selected=id;activeChoice=0;setEditorOpen(true);renderGraph();renderInspector();openSceneEditor();}
 function renderInspector(){const s=scene();$('scene-dialogue').checked=!!s.dialogue;$('scene-dialogue').disabled=project.scenes.some(n=>n.actors?.some(p=>p.dialogue===s.id));$('scene-heading').textContent=s.title||'Сцена без названия';$('scene-id').textContent=s.dialogue?'ДИАЛОГ':s.id===project.start?'НАЧАЛО':'СЦЕНА';$('scene-title').value=s.title;$('scene-text').value=s.text;$('set-start').disabled=s.id===project.start;$('delete-scene').disabled=project.scenes.length===1;renderChoices();renderImageEditor();renderCharacters();renderDialogueEditor();}
 function renderChoices(){
   const s=scene();activeChoice=Math.max(0,Math.min(activeChoice,s.choices.length-1));$('choices').replaceChildren();
@@ -122,8 +122,8 @@ $('dialogue-text').oninput=e=>{scene().text=e.target.value;save();renderGraph();
 $('dialogue-add-answer').onclick=()=>$('add-choice').onclick();
 $('dialogue-next').onclick=()=>{
   if(project.scenes.length>=500)return alert('Максимум 500 сцен.');
-  const previous=scene();$('add-scene').onclick();const next=scene();
-  QuestLayers.inheritArtwork(previous,next);next.dialogue=true;next.title='Следующая реплика';next.speaker=previous.speaker||'';next.text='';
+  const previous=scene(),newLocation=$('next-new-location').checked;$('add-scene').onclick();const next=scene();
+  if(!newLocation)QuestLayers.inheritArtwork(previous,next);next.dialogue=true;next.title='Следующая реплика';next.speaker=previous.speaker||'';next.text='';
   previous.choices.push({text:'Продолжить разговор',target:next.id});
   save();renderGraph();renderInspector();$('dialogue-text').focus();
 };
