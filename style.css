@@ -53,3 +53,5 @@ body.sidebar-collapsed .workspace{grid-template-columns:minmax(0,1fr)}.sidebar[h
 body.sidebar-collapsed #editor-dock{grid-column:1}
 body.sidebar-collapsed .graph-section{grid-column:1;grid-row:1}
 .character-card select,.actor-row select{width:100%;min-width:0;padding:7px;background:#20271f;color:var(--text);border:1px solid #526047;border-radius:4px}.character-card small{width:100%}
+
+#editor-actors .actor-remove{display:none;position:absolute;transform:translate(-50%,-100%);width:30px;height:30px;padding:0;line-height:1;font-size:22px;background:#482b29;color:#fff;border:1px solid #db9d91;border-radius:50%;z-index:10;pointer-events:auto;cursor:pointer}.moving-actors #editor-actors .actor-remove{display:block}#editor-actors .actor-remove:focus-visible{outline:2px solid white;outline-offset:2px}
