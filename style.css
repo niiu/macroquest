@@ -67,3 +67,5 @@ body.sidebar-collapsed .graph-section{grid-column:1;grid-row:1}
 .next-reply-controls{display:flex;flex-direction:column;align-items:flex-start;gap:8px}.next-reply-controls .toggle{font-size:12px;font-weight:normal;letter-spacing:normal}.next-reply-controls small{margin:0}
 
 .edge-label.dialogue-edge{border-color:#8ecbd8;color:#bce8ef;background:#20353a}
+
+.conversation-art{position:relative;line-height:0;margin:16px 0}.conversation-art>.conversation-background{display:block;width:100%;height:auto;border-radius:6px}.conversation-art .actor-layer{overflow:hidden}

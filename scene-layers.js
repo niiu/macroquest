@@ -59,7 +59,15 @@
           const node=quest.scenes.find(s=>s.id===id);if(!node){finish();return;}
           panel.replaceChildren();
           const heading=document.createElement('h2');heading.textContent=node.speaker||name||node.title;
-          const text=document.createElement('p');text.className='conversation-text';text.textContent=node.text;panel.append(heading,text);
+          panel.append(heading);
+          if(!automatic&&node.image){
+            const artwork=document.createElement('div');artwork.className='image-surface conversation-art';
+            const background=document.createElement('img');background.className='conversation-background';background.alt=node.title||'Иллюстрация к реплике';background.src=node.image;background.draggable=false;
+            const placements=document.createElement('div');placements.className='actor-layer';
+            artwork.append(background,placements);actors(placements,node,quest.characters||[]);panel.append(artwork);
+            background.onerror=()=>{artwork.hidden=true;};
+          }
+          const text=document.createElement('p');text.className='conversation-text';text.textContent=node.text;panel.append(text);
           if(message){const result=document.createElement('p');result.textContent=message;result.setAttribute('role','status');panel.append(result);}
           for(const choice of node.choices){
             const availability=root.QuestRules.transition(choice,quest.variables||[],getState());
@@ -79,7 +87,7 @@
     });
     return dispose;
   }
-  const conversationCSS='.actor-layer:has(.talkable){z-index:5}.image-surface .scene-actor.talkable{pointer-events:auto;cursor:pointer}.talkable:hover,.talkable:focus-visible{filter:drop-shadow(0 0 7px #d8e5a0);outline:2px solid #c9dc91}.conversation{box-sizing:border-box;width:min(620px,92vw);max-height:85vh;overflow:auto;background:#1d251b;color:#e5e8dc;border:1px solid #8b9d68;border-radius:12px;padding:24px}.conversation::backdrop{background:#0009}.conversation-text{white-space:pre-wrap;line-height:1.6}.conversation-answer{display:block;width:100%;text-align:left;margin:10px 0}.conversation-exit{margin-top:22px}.conversation small{display:block}.conversation-inline{width:100%;max-height:none;margin:16px 0;overflow:visible}.conversation-inline h2{font-size:22px;margin-top:0}';
+  const conversationCSS='.conversation-art{position:relative;line-height:0;margin:16px 0}.conversation-art>.conversation-background{display:block;width:100%;height:auto;border-radius:6px}.conversation-art .actor-layer{overflow:hidden}.actor-layer:has(.talkable){z-index:5}.image-surface .scene-actor.talkable{pointer-events:auto;cursor:pointer}.talkable:hover,.talkable:focus-visible{filter:drop-shadow(0 0 7px #d8e5a0);outline:2px solid #c9dc91}.conversation{box-sizing:border-box;width:min(620px,92vw);max-height:85vh;overflow:auto;background:#1d251b;color:#e5e8dc;border:1px solid #8b9d68;border-radius:12px;padding:24px}.conversation::backdrop{background:#0009}.conversation-text{white-space:pre-wrap;line-height:1.6}.conversation-answer{display:block;width:100%;text-align:left;margin:10px 0}.conversation-exit{margin-top:22px}.conversation small{display:block}.conversation-inline{width:100%;max-height:none;margin:16px 0;overflow:visible}.conversation-inline h2{font-size:22px;margin-top:0}';
   const api={inheritArtwork,conversations,conversationCSS,hover,validate,actors,paths,onImage,anchor,css:css+conversationCSS,pictures,picture};api.standaloneSource=()=>`(${installSceneLayers.toString()})(globalThis);`;
   if(typeof module!=='undefined')module.exports=api;else root.QuestLayers=api;
 })(globalThis);

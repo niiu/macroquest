@@ -165,3 +165,22 @@ get('zones').onclick({clientX:110,clientY:110});assert.equal(get('scene-title').
 get('zones').onclick({clientX:600,clientY:350});assert.equal(get('scene-title').textContent,'Ответ','click on painted zone in dialogue follows transition');
 assert.equal(get('choices').children[0].children[1].textContent,'Держи ключ.');
 console.log('PASS: clickable NPC and image zones in automatic dialogue, conversation close, blank image click');
+
+const illustratedTalk=structuredClone(talkQuest);
+illustratedTalk.scenes.find(s=>s.id==='hello').image=layered.characters[0].image;
+illustratedTalk.scenes.find(s=>s.id==='hello').actors=[{character:'hero',imageId:'happy',x:.4,y:.9,width:.3}];
+illustratedTalk.scenes.find(s=>s.id==='reply').image=layered.characters[0].images[0].image;
+const illustratedHTML=exporter.build(illustratedTalk);
+elements.clear();get('quest-data').textContent=illustratedHTML.match(/<script id="quest-data" type="application\/json">([\s\S]*?)<\/script>/)[1];
+vm.runInNewContext(illustratedHTML.match(/<script>([\s\S]*?)<\/script>/)[1],context);
+get('actors').children[0].onclick();panel=context.document.body.children.at(-1);
+let artwork=panel.children.find(e=>e.className==='image-surface conversation-art');
+assert.equal(artwork.children[0].src,layered.characters[0].image,'modal shows reply artwork');
+assert.equal(artwork.children[1].children[0].src,layered.characters[0].images[0].image,'modal shows selected NPC layer image');
+assert.ok(panel.children.indexOf(artwork)<panel.children.findIndex(e=>e.className==='conversation-text'),'artwork precedes reply and answers');
+panel.children.find(e=>e.textContent==='Дай ключ').onclick();
+artwork=panel.children.find(e=>e.className==='image-surface conversation-art');
+assert.equal(artwork.children[0].src,layered.characters[0].images[0].image,'following reply replaces illustration');
+assert.equal(artwork.children[1].children.length,0,'old layers are removed');
+artwork.children[0].onerror();assert.equal(artwork.hidden,true);assert.ok(panel.children.find(e=>e.textContent==='Идём к двери'),'broken artwork does not block answers');
+console.log('PASS: modal reply images and character layers, image replacement, broken image fallback');
