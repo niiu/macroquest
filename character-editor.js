@@ -11,7 +11,7 @@ function addActor(id,x=.5,y=.85){
   if(!scene().image){$('character-status').textContent='Сначала загрузите фон сцены.';return;}
   scene().actors??=[];if(scene().actors.length>=100)return;
   const character=(project.characters||[]).find(c=>c.id===id);if(!character)return;
-  scene().actors.push({character:id,imageId:selectedPicture(character).id,x,y,width:.25});$('move-actors').checked=true;save();renderCharacters();
+  scene().actors.push({character:id,imageId:selectedPicture(character).id,x,y,width:.25});$('move-actors').checked=true;save();renderCharacters();renderGraph();
 }
 function renderActorLayers(){
   QuestLayers.actors($('editor-actors'),scene(),project.characters||[]);
@@ -60,7 +60,7 @@ function renderCharacters(){
     const dialogue=el('select');dialogue.setAttribute('aria-label','Диалог слоя '+(index+1));
     const none=el('option','','Без диалога');none.value='';dialogue.append(none);
     for(const node of project.scenes.filter(s=>s.dialogue)){const option=el('option','',node.title||'Реплика');option.value=node.id;dialogue.append(option);}
-    dialogue.value=placement.dialogue||'';dialogue.onchange=()=>{if(dialogue.value)placement.dialogue=dialogue.value;else delete placement.dialogue;save();renderInspector();};
+    dialogue.value=placement.dialogue||'';dialogue.onchange=()=>{if(dialogue.value)placement.dialogue=dialogue.value;else delete placement.dialogue;save();renderInspector();renderGraph();};
     const createDialogue=el('button','','+ Диалог');createDialogue.onclick=()=>{if(project.scenes.length>=500){$('character-status').textContent='Максимум 500 сцен.';return;}const previous=selected;$('add-scene').onclick();if(selected===previous)return;scene().dialogue=true;scene().title='Диалог: '+character.name;scene().text='Приветствую, путник.';placement.dialogue=selected;save();renderGraph();renderInspector();};
     const editDialogue=el('button','','Открыть диалог');editDialogue.disabled=!placement.dialogue;editDialogue.onclick=()=>select(placement.dialogue);
     row.append(el('span','','Разговор при клике:'),dialogue,createDialogue,editDialogue);

@@ -34,7 +34,13 @@ const undoDisconnect=el('button','quiet','↶ Вернуть путь');
 undoDisconnect.id='undo-disconnect';undoDisconnect.hidden=true;
 document.querySelector('.canvas-footer').append(undoDisconnect);
 function pathTargets(choice){return choice.check?[...new Set([...choice.check.targets,choice.check.failureTarget].filter(Boolean))]:[choice.target];}
-function incomingPaths(target){return project.scenes.flatMap(source=>source.choices.filter(choice=>pathTargets(choice).includes(target)).map(choice=>({source,choice})));}
+function dialogueLinks(source){return (source.actors||[]).filter(actor=>actor.dialogue&&project.scenes.some(s=>s.id===actor.dialogue)).map(actor=>({source,choice:actor,actor,target:actor.dialogue,name:project.characters?.find(c=>c.id===actor.character)?.name||'Персонаж'}));}
+function incomingPaths(target){return project.scenes.flatMap(source=>[...source.choices.filter(choice=>pathTargets(choice).includes(target)).map(choice=>({source,choice})),...dialogueLinks(source).filter(link=>link.target===target)]);}
+function disconnectDialogue(source,actor){
+  if(!source.actors?.includes(actor)||!actor.dialogue)return;
+  lastDisconnected={project,source,actor,target:actor.dialogue};delete actor.dialogue;
+  save();renderGraph();renderInspector();$('graph-status').textContent='Связь с диалогом отключена. Персонаж остаётся на сцене.';
+}
 function nodeHeight(s){return Math.max(154,96+(incomingPaths(s.id).length-1)*28);}
 function disconnectPath(source,choice){
   const index=source.choices.indexOf(choice);if(index<0)return;
@@ -44,7 +50,9 @@ function disconnectPath(source,choice){
 }
 undoDisconnect.onclick=()=>{
   const last=lastDisconnected;lastDisconnected=null;
-  if(!last||last.project!==project||!project.scenes.includes(last.source)||!project.scenes.some(s=>s.id===last.choice.target))return;
+  if(!last||last.project!==project||!project.scenes.includes(last.source))return;
+  if(last.actor){if(last.source.actors?.includes(last.actor)&&!last.actor.dialogue&&project.scenes.some(s=>s.id===last.target&&s.dialogue)){last.actor.dialogue=last.target;save();renderGraph();renderInspector();}return;}
+  if(!project.scenes.some(s=>s.id===last.choice.target))return;
   try{QuestRules.validateChoice(last.choice,project.variables||[]);}catch(e){renderGraph();$('graph-status').textContent='Путь нельзя вернуть: один из его параметров удалён.';return;}
   last.source.choices.splice(Math.min(last.index,last.source.choices.length),0,last.choice);
   save();renderGraph();renderInspector();setConnectionStatus();
@@ -81,11 +89,11 @@ function resizeGraph(){
 }
 function renderGraph(){
   undoScene.hidden=!lastDeletedScene||lastDeletedScene.project!==project;
-  undoDisconnect.hidden=!lastDisconnected||lastDisconnected.project!==project||!project.scenes.includes(lastDisconnected.source)||!project.scenes.some(s=>s.id===lastDisconnected.choice.target);
+  undoDisconnect.hidden=!lastDisconnected||lastDisconnected.project!==project||!project.scenes.includes(lastDisconnected.source)||!project.scenes.some(s=>s.id===(lastDisconnected.actor?lastDisconnected.target:lastDisconnected.choice.target));
   $('scene-count').textContent=project.scenes.length;$('scene-list').replaceChildren();$('nodes').replaceChildren();resizeGraph();
   project.scenes.forEach((s,i)=>{
     const item=el('button','scene-item'+(s.id===selected?' active':''));item.append(el('span','number',String(i+1).padStart(2,'0')));
-    const label=el('span','',s.title||'Без названия');label.append(el('small','',s.dialogue?'Диалог':s.id===project.start?'Начальная сцена':s.choices.length?'Сцена':'Финал'));item.append(label);item.onclick=()=>select(s.id);$('scene-list').append(item);
+    const label=el('span','',s.title||'Без названия');label.append(el('small','',s.dialogue?'Диалог':s.id===project.start?'Начальная сцена':(s.choices.length||dialogueLinks(s).length)?'Сцена':'Финал'));item.append(label);item.onclick=()=>select(s.id);$('scene-list').append(item);
     item.draggable=true;item.title='Перетащите для изменения порядка. Alt + ↑/↓ — переместить с клавиатуры.';
     item.ondragstart=e=>{sceneDragId=s.id;e.dataTransfer.setData('text/plain',s.id);e.dataTransfer.effectAllowed='move';};
     item.ondragover=e=>{if(sceneDragId){e.preventDefault();e.dataTransfer.dropEffect='move';}};
@@ -94,8 +102,8 @@ function renderGraph(){
     const node=el('div','node'+(s.id===selected?' selected':''));node.style.left=s.x+'px';node.style.top=s.y+'px';node.dataset.sceneId=s.id;
     node.style.minHeight=nodeHeight(s)+'px';
     const card=el('button','node-card');card.setAttribute('aria-label','Редактировать: '+s.title);
-    const top=el('div','node-top',s.dialogue?'☏ ДИАЛОГ':s.id===project.start?'⚑ НАЧАЛО':s.choices.length?'◇ СЦЕНА':'✦ ФИНАЛ');top.append(el('span','',String(i+1).padStart(2,'0')));
-    const body=el('div','node-body');body.append(el('h3','',s.title||'Без названия'),el('p','',s.text||'Здесь начинается история…'),el('div','node-count',`${s.choices.length} переходов${s.image?' · ▧ картинка':''}`));card.append(top,body);
+    const top=el('div','node-top',s.dialogue?'☏ ДИАЛОГ':s.id===project.start?'⚑ НАЧАЛО':(s.choices.length||dialogueLinks(s).length)?'◇ СЦЕНА':'✦ ФИНАЛ');top.append(el('span','',String(i+1).padStart(2,'0')));
+    const body=el('div','node-body');body.append(el('h3','',s.title||'Без названия'),el('p','',s.text||'Здесь начинается история…'),el('div','node-count',`${s.choices.length} переходов${dialogueLinks(s).length?' · ☏ '+dialogueLinks(s).length+' диалогов':''}${s.image?' · ▧ картинка':''}`));card.append(top,body);
     card.onclick=()=>{if(performance.now()<Number(node.dataset.suppressUntil||0))return;if(connectionSource)completeConnection(s.id);else select(s.id);};
     card.onpointerdown=e=>{if(!connectionSource)dragScene(e,s,node,card);};
     node.append(card);
@@ -103,10 +111,10 @@ function renderGraph(){
     const incoming=incomingPaths(s.id);
     (incoming.length?incoming:[null]).forEach((path,index)=>{
       const input=el('button','node-port port-in'+(path?' connected-port':''));input.style.top=(76+index*28)+'px';
-      const label=path?`Отключить путь: ${path.source.title} → ${s.title}. ${path.choice.text}`:'Вход: '+s.title;
+      const label=path?.actor?`Отключить разговор: ${path.source.title} → ${s.title}. ${path.name}`:path?`Отключить путь: ${path.source.title} → ${s.title}. ${path.choice.text}`:'Вход: '+s.title;
       input.dataset.restLabel=label;input.setAttribute('aria-label',label);input.title=path?label:'Завершить путь здесь';
       if(path)input.append(el('span','port-mark','×'));
-      input.onclick=e=>{e.stopPropagation();if(connectionSource)completeConnection(s.id);else if(path)disconnectPath(path.source,path.choice);};
+      input.onclick=e=>{e.stopPropagation();if(connectionSource)completeConnection(s.id);else if(path?.actor)disconnectDialogue(path.source,path.actor);else if(path)disconnectPath(path.source,path.choice);};
       node.append(input);
     });
     const output=el('button','node-port port-out','+');output.setAttribute('aria-label','Проложить путь из: '+s.title);output.title='Перетащите к другой сцене или нажмите и выберите сцену';
@@ -136,6 +144,18 @@ function drawEdges(){
       if(c.effects?.length){label.classList.add('has-effects');label.prepend('↯ ');label.title+=' · При переходе: '+QuestRules.effectsSummary(c,project.variables||[]);label.setAttribute('aria-label',`Путь: ${s.title} → ${t.title}. ${c.text}. ${label.title}`);}
       if(c.check){const bands=[...c.check.targets.flatMap((id,i)=>id===target?[QuestRules.rollBands[i]]:[]),...(c.check.failureTarget===target?['Провал']:[])].join(', ');label.prepend('🎲 ');label.append(el('small','',bands));label.title+=' · D20: '+bands;}
     }
+    }
+    for(const link of dialogueLinks(s)){
+      const t=project.scenes.find(n=>n.id===link.target),lane=lanes.get(t.id)||0;lanes.set(t.id,lane+1);
+      const g=edgeGeometry(s,t,lane,link.actor);
+      svg.append(svgEl('path',{d:g.d,fill:'none',stroke:'#8ecbd8','stroke-width':2,'stroke-dasharray':'7 5','marker-end':'url(#path-arrow)'}));
+      const open=e=>{e.stopPropagation();if(!connectionSource)select(t.id);};
+      const hit=svgEl('path',{d:g.d,fill:'none',stroke:'transparent','stroke-width':18,class:'edge-hit'});hit.onclick=open;svg.append(hit);
+      const label=el('button','edge-label dialogue-edge','☏ '+link.name);
+      label.style.left=g.lx+'px';label.style.top=g.ly+'px';
+      label.title='Разговор с персонажем: '+link.name+' · '+t.title+' · Нажмите, чтобы открыть редактор диалога';
+      label.setAttribute('aria-label','Открыть диалог: '+s.title+' → '+t.title+'. '+link.name);
+      label.onclick=open;$('edge-labels').append(label);
     }
   }
 }

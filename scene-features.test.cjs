@@ -66,3 +66,16 @@ assert.deepEqual(inheritedData.scenes.at(-1).actors,inheritedReply.actors);
 assert.equal(saves.questKey(inheritedQuest),saves.questKey(inheritedData),'editor inheritance metadata does not alter save compatibility');
 layers.inheritArtwork({id:'empty',actors:[]},inheritedReply);assert.equal(inheritedReply.image,undefined);
 console.log('PASS: next reply artwork copy, isolated placements, no-background source, HTML and save compatibility');
+
+const linkCode=fs.readFileSync('graph-editor.js','utf8').split('function pathTargets')[1].split('try{dockPreference')[0];
+const linkQuest=structuredClone(project);linkQuest.scenes.find(s=>s.id==='mid').dialogue=true;linkQuest.scenes[0].actors[0].dialogue='mid';
+const linkContext={project:linkQuest,lastDisconnected:null,undoDisconnect:{},save(){},renderGraph(){},renderInspector(){},setConnectionStatus(){},$:get,QuestRules:rules};
+vm.runInNewContext('function pathTargets'+linkCode,linkContext);
+assert.equal(linkContext.dialogueLinks(linkQuest.scenes[0]).length,1);
+assert.equal(linkContext.incomingPaths('mid').filter(p=>p.actor).length,1);
+const actorLink=linkQuest.scenes[0].actors[0];
+linkContext.disconnectDialogue(linkQuest.scenes[0],actorLink);
+assert.equal(actorLink.dialogue,undefined);assert.equal(linkQuest.scenes[0].actors.length,1);
+linkContext.undoDisconnect.onclick();assert.equal(actorLink.dialogue,'mid');
+assert.equal(linkContext.incomingPaths('mid').filter(p=>p.actor).length,1);
+console.log('PASS: graph NPC dialogue connections, dedicated incoming port, disconnect and undo retain actor');
