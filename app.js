@@ -43,28 +43,28 @@ function el(tag,cls,text){const n=document.createElement(tag);if(cls)n.className
 function setEditorOpen(open){$('editor-body').hidden=!open;$('collapse-editor').textContent=open?'Свернуть ↓':'Открыть редактор ↑';$('collapse-editor').setAttribute('aria-expanded',String(open));}
 $('collapse-editor').onclick=()=>setEditorOpen($('editor-body').hidden);
 function select(id){selected=id;activeChoice=0;setEditorOpen(true);renderGraph();renderInspector();openSceneEditor();}
-function renderInspector(){const s=scene();$('scene-dialogue').checked=!!s.dialogue;$('scene-dialogue').disabled=project.scenes.some(n=>n.actors?.some(p=>p.dialogue===s.id));$('scene-heading').textContent=s.title||'Сцена без названия';$('scene-id').textContent=s.id===project.start?'НАЧАЛО':'СЦЕНА';$('scene-title').value=s.title;$('scene-text').value=s.text;$('set-start').disabled=s.id===project.start;$('delete-scene').disabled=project.scenes.length===1;renderChoices();renderImageEditor();renderCharacters();}
+function renderInspector(){const s=scene();$('scene-dialogue').checked=!!s.dialogue;$('scene-dialogue').disabled=project.scenes.some(n=>n.actors?.some(p=>p.dialogue===s.id));$('scene-heading').textContent=s.title||'Сцена без названия';$('scene-id').textContent=s.dialogue?'ДИАЛОГ':s.id===project.start?'НАЧАЛО':'СЦЕНА';$('scene-title').value=s.title;$('scene-text').value=s.text;$('set-start').disabled=s.id===project.start;$('delete-scene').disabled=project.scenes.length===1;renderChoices();renderImageEditor();renderCharacters();renderDialogueEditor();}
 function renderChoices(){
   const s=scene();activeChoice=Math.max(0,Math.min(activeChoice,s.choices.length-1));$('choices').replaceChildren();
   s.choices.forEach((c,i)=>{
     const row=el('div','choice'+(i===activeChoice?' active-choice':''));row.style.setProperty('--zone-color',QuestZones.color(i));
-    const caption=el('div','choice-caption');caption.append(el('span','zone-dot'),el('strong','',`Действие ${i+1}`));
+    const caption=el('div','choice-caption');caption.append(el('span','zone-dot'),el('strong','',`${s.dialogue?'Ответ':'Действие'} ${i+1}`));
     const input=el('input');input.value=c.text;input.placeholder='Например: открыть дверь';input.setAttribute('aria-label','Текст действия '+(i+1));input.oninput=()=>{c.text=input.value;save();syncZoneTools();drawEdges();};
-    const label=el('label','','ПЕРЕХОД В СЦЕНУ');const target=el('select');target.setAttribute('aria-label','Цель действия '+(i+1));
+    const label=el('label','',s.dialogue?'СЛЕДУЮЩАЯ РЕПЛИКА ИЛИ СЦЕНА':'ПЕРЕХОД В СЦЕНУ');const target=el('select');target.setAttribute('aria-label','Цель действия '+(i+1));
     project.scenes.forEach(t=>{const o=el('option','',t.title||'Без названия');o.value=t.id;target.append(o);});target.value=c.target;target.onchange=()=>{c.target=target.value;save();renderGraph();};
     const controls=el('div','choice-controls');const paint=el('button','','Нарисовать зону');paint.onclick=()=>{activeChoice=i;renderChoices();setSceneTab('image');paintZones();};
     const conditions=el('button','','Условия и последствия');conditions.onclick=()=>openPathEditor(s,c);
     const remove=el('button','quiet','Удалить действие');remove.onclick=()=>{if(c.zone?.length&&!confirm('Удалить действие вместе с нарисованной зоной?'))return;s.choices.splice(i,1);if(activeChoice>i)activeChoice--;save();renderChoices();renderGraph();paintZones();};
-    controls.append(paint,conditions,remove);row.append(caption,input,label,target,el('p','hint',QuestRules.summary(c,project.variables||[])),controls);$('choices').append(row);
+    if(!s.dialogue)controls.append(paint);controls.append(conditions,remove);row.append(caption,input,label,target,el('p','hint',QuestRules.summary(c,project.variables||[])),controls);$('choices').append(row);
     if(c.effects?.length)row.insertBefore(el('p','effect-summary','При переходе: '+QuestRules.effectsSummary(c,project.variables||[])),controls);
   });
-  if(!s.choices.length)$('choices').append(el('p','hint','Пока нет действий. Добавьте первое действие, чтобы нарисовать его зону.'));
+  if(!s.choices.length)$('choices').append(el('p','hint',s.dialogue?'Пока нет ответов. Добавьте ответ или следующую реплику.':'Пока нет действий. Добавьте первое действие, чтобы нарисовать его зону.'));
   syncZoneTools();
 }
 function render(){cancelConnection();$('quest-title').value=project.title;document.querySelector('.project-name').textContent=project.title+' / Редактор';renderGraph();renderInspector();}
 $('quest-title').oninput=e=>{project.title=e.target.value;document.querySelector('.project-name').textContent=project.title+' / Редактор';save();};
 $('scene-title').oninput=e=>{scene().title=e.target.value;$('scene-heading').textContent=scene().title||'Сцена без названия';save();renderGraph();renderChoices();};
-$('scene-dialogue').onchange=e=>{scene().dialogue=e.target.checked;save();renderGraph();};
+$('scene-dialogue').onchange=e=>{scene().dialogue=e.target.checked;save();renderGraph();renderInspector();};
 $('scene-text').oninput=e=>{scene().text=e.target.value;save();renderGraph();};
 $('add-scene').onclick=()=>{if(project.scenes.length>=500)return alert('Максимум 500 сцен в одном квесте.');const viewport=$('graph-viewport'),position=QuestGraphArea.position(QuestGraphArea.bounds(project,nodeHeight),(viewport.scrollLeft+viewport.clientWidth/2)/zoom-110,(viewport.scrollTop+viewport.clientHeight/2)/zoom-77);const s={id:'s'+crypto.randomUUID(),title:'Новая сцена',text:'',...position,choices:[]};project.scenes.push(s);save();setSceneTab('text');select(s.id);$('scene-title').focus({preventScroll:true});};
 $('add-choice').onclick=()=>openPathEditor(scene(),null,project.scenes.find(s=>s.id!==selected)?.id||selected);
@@ -90,13 +90,13 @@ function choiceAllowed(c){return choiceResult(c).ok;}
 function takeChoice(c){const result=QuestRules.resolve(c,project.variables||[],playerState);if(!result.ok)return;playerState=result.state;playing=result.target||playing;renderPlayer();$('play-roll').textContent=result.roll?.message||'';previewSaves?.autosave();$('player').scrollTop=0;}
 function renderPlayerChoices(){
   const s=project.scenes.find(s=>s.id===playing);$('play-choices').replaceChildren();
-  for(const c of s.choices){if(s.image&&QuestLayers.onImage(c)&&!$('play-image-wrap').dataset.failed)continue;const result=choiceResult(c),b=el('button','',`${result.ok?'→':'🔒'} ${c.text}${c.check?' · 🎲 '+QuestRules.checkSummary(c,project.variables||[]):''}`);b.disabled=!result.ok;b.onclick=()=>takeChoice(c);$('play-choices').append(b);if(!result.ok)$('play-choices').append(el('p','locked-reason',result.reason));}
+  for(const c of s.choices){if(!s.dialogue&&s.image&&QuestLayers.onImage(c)&&!$('play-image-wrap').dataset.failed)continue;const result=choiceResult(c),b=el('button','',`${result.ok?'→':'🔒'} ${c.text}${c.check?' · 🎲 '+QuestRules.checkSummary(c,project.variables||[]):''}`);b.disabled=!result.ok;b.onclick=()=>takeChoice(c);$('play-choices').append(b);if(!result.ok)$('play-choices').append(el('p','locked-reason',result.reason));}
   QuestLayers.paths($('play-image-paths'),s,project.scenes,choiceResult,takeChoice);
   if(!s.choices.length&&!s.actors?.some(p=>p.dialogue))$('play-choices').append(el('p','eyebrow','КОНЕЦ ИСТОРИИ'));
   else if(s.choices.length&&!s.choices.some(choiceAllowed))$('play-choices').append(el('p','hint','Нет доступных путей. Проверьте состояние персонажа или начните сначала.'));
 }
 let disposeConversation=()=>{};
-function renderPlayer(){disposeConversation();$('play-roll').textContent='';delete $('play-image-wrap').dataset.failed;const s=project.scenes.find(s=>s.id===playing);$('play-title').textContent=s.title;$('play-text').textContent=s.text||'Текст этой сцены ещё не написан.';renderPlayerChoices();renderPlayerState();renderPlayerImage(s);disposeConversation=QuestLayers.conversations($('play-actors'),s,project,{getState:()=>playerState,apply:state=>{playerState=state;previewSaves?.autosave();},travel:(id,message)=>{playing=id;renderPlayer();$('play-roll').textContent=message;previewSaves?.autosave();},refresh:renderPlayer});}
+function renderPlayer(){disposeConversation();$('play-roll').textContent='';delete $('play-image-wrap').dataset.failed;const s=project.scenes.find(s=>s.id===playing);$('play-title').textContent=s.title;$('play-text').textContent=s.text||'Текст этой сцены ещё не написан.';renderPlayerChoices();renderPlayerState();renderPlayerImage(s);disposeConversation=QuestLayers.conversations($('play-actors'),s,project,{getState:()=>playerState,apply:state=>{playerState=state;previewSaves?.autosave();},travel:(id,message)=>{playing=id;renderPlayer();$('play-roll').textContent=message;previewSaves?.autosave();},refresh:renderPlayer,autoHost:$('play-choices')});$('play-text').hidden=!!s.dialogue;}
 function startPlayer(){
   previewSaves?.dispose();playing=project.start;playerState=QuestRules.initialState(project.variables||[]);renderPlayer();
   previewSaves=QuestSaves.attach({host:$('preview-saves'),quest:project,namespace:'preview',getState:()=>({scene:playing,state:playerState}),onLoad:saved=>{playing=saved.scene;playerState=saved.state;renderPlayer();$('player').scrollTop=0;}});
@@ -105,3 +105,36 @@ $('player').addEventListener('close',()=>{disposeConversation();previewSaves?.di
 $('play').onclick=()=>{startPlayer();$('player').showModal();};$('close-player').onclick=()=>$('player').close();$('restart').onclick=()=>{startPlayer();$('player').scrollTop=0;};
 
 
+
+function renderDialogueEditor(){
+  const s=scene(),on=!!s.dialogue;
+  $('dialogue-editor').hidden=!on;$('dialogue-mode-hint').hidden=!on;
+  document.querySelector('.editor-tabs').hidden=on;
+  (on?$('dialogue-answers'):$('scene-choices-home')).append($('choices'));
+  $('dialogue-title').value=s.title;$('dialogue-speaker').value=s.speaker||'';$('dialogue-text').value=s.text;
+  if(on)for(const panel of document.querySelectorAll('[data-editor-panel]'))panel.hidden=true;
+  else{const tab=document.querySelector('[data-editor-tab][aria-pressed="true"]');setSceneTab(tab?.dataset.editorTab||'text');}
+}
+$('dialogue-title').oninput=e=>{scene().title=e.target.value;$('scene-heading').textContent=e.target.value;save();renderGraph();};
+$('dialogue-speaker').oninput=e=>{scene().speaker=e.target.value;save();};
+$('dialogue-text').oninput=e=>{scene().text=e.target.value;save();renderGraph();};
+$('dialogue-add-answer').onclick=()=>$('add-choice').onclick();
+$('dialogue-next').onclick=()=>{
+  if(project.scenes.length>=500)return alert('Максимум 500 сцен.');
+  const previous=scene();$('add-scene').onclick();const next=scene();
+  next.dialogue=true;next.title='Следующая реплика';next.speaker=previous.speaker||'';next.text='';
+  previous.choices.push({text:'Продолжить разговор',target:next.id});
+  save();renderGraph();renderInspector();$('dialogue-text').focus();
+};
+$('load-demo').onclick=async()=>{
+  $('load-demo').disabled=true;
+  try{
+    const response=await fetch('demo-quest.json');if(!response.ok)throw Error('Не удалось загрузить пример.');
+    const next=validate(await response.json());await saveQueue;if(!await QuestStorage.read('before-demo'))await QuestStorage.write(structuredClone(project),'before-demo');
+    project=next;selected=project.start;activeChoice=0;save();setSceneTab('text');render();
+    $('export-status').textContent='Тестовый квест загружен. Предыдущий проект сохранён: «Вернуть проект до демо».';
+  }catch(e){$('export-status').textContent=e.message;}finally{$('load-demo').disabled=false;}
+};
+$('restore-demo-backup').onclick=async()=>{
+  try{const backup=await QuestStorage.read('before-demo');if(!backup)throw Error('Резервной копии пока нет.');project=validate(backup);selected=project.start;activeChoice=0;save();render();$('export-status').textContent='Проект до загрузки демо восстановлен.';}catch(e){$('export-status').textContent=e.message;}
+};

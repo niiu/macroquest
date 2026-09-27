@@ -125,3 +125,18 @@ assert.equal(get('scene-title').textContent,'Дверь','ordinary scene target 
 const badTalk=structuredClone(talkQuest);badTalk.scenes[0].actors[0].dialogue='missing';
 assert.throws(()=>exporter.build(badTalk));
 console.log('PASS: NPC dialogue entry, branching, conditions, effects, exit, scene travel, validation and HTML serialization');
+
+const autoQuest=structuredClone(talkQuest);autoQuest.start='hello';autoQuest.scenes.find(s=>s.id==='hello').speaker='Странник';
+const autoHTML=exporter.build(autoQuest),autoSource=autoHTML.match(/<script>([\s\S]*?)<\/script>/)[1];
+elements.clear();get('quest-data').textContent=autoHTML.match(/<script id="quest-data" type="application\/json">([\s\S]*?)<\/script>/)[1];
+vm.runInNewContext(autoSource,context);
+let inline=get('choices').children[0];assert.equal(inline.className,'conversation conversation-inline');assert.equal(inline.children[0].textContent,'Странник');
+assert.equal(get('scene-text').hidden,true);
+inline.children.find(e=>e.textContent==='Дай ключ').onclick();
+assert.equal(get('scene-title').textContent,'Ответ','automatic dialogue advances actual saved scene');
+inline=get('choices').children[0];assert.equal(inline.children[1].textContent,'Держи ключ.');
+const autoSaveControls=get('game-saves').children[0].children[1];
+autoSaveControls.children[1].onclick();
+inline.children.find(e=>e.textContent==='Идём к двери').onclick();assert.equal(get('scene-title').textContent,'Дверь');
+autoSaveControls.children[2].onclick();assert.equal(get('scene-title').textContent,'Ответ');assert.equal(get('choices').children[0].children[1].textContent,'Держи ключ.');
+console.log('PASS: automatic dialogue scene, speaker, transition, save and load current reply');

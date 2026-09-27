@@ -107,7 +107,7 @@ $('remove-image').onclick=()=>{
 };
 
 function renderPlayerImage(s){
-  playerHoveredZone=-1;playerImageReady=false;$('play-image-wrap').hidden=!s.image;QuestLayers.actors($('play-actors'),s,project.characters||[]);
+  playerHoveredZone=-1;playerImageReady=false;$('play-image-wrap').hidden=!s.image||!!s.dialogue;QuestLayers.actors($('play-actors'),s,project.characters||[]);
   $('play-hotspot').textContent='Выберите область на изображении';$('play-zone-canvas').style.cursor='default';
   const img=$('play-image'),canvas=$('play-zone-canvas');canvas.getContext('2d').clearRect(0,0,canvas.width,canvas.height);
   img.onload=()=>{if(playing!==s.id)return;canvas.width=img.naturalWidth;canvas.height=img.naturalHeight;playerImageReady=true;drawPlayerZones();};

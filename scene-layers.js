@@ -15,6 +15,7 @@
       for(const p of c.images||[]){if(!p||typeof p.id!=='string'||!p.id||imageIds.has(p.id)||typeof p.name!=='string'||!p.name.trim()||p.name.length>100||!imageValid(p.image))throw Error('Некорректная картинка персонажа.');imageIds.add(p.id);}
     }
     for(const scene of project.scenes){
+      if(scene.speaker!==undefined&&(typeof scene.speaker!=='string'||scene.speaker.length>100))throw Error('Некорректное имя собеседника.');
       if(scene.dialogue!==undefined&&typeof scene.dialogue!=='boolean')throw Error('Некорректный тип диалоговой сцены.');
       if(scene.actors===undefined)continue;
       if(!Array.isArray(scene.actors)||scene.actors.length>100)throw Error('Допускается до 100 слоёв персонажей на сцене.');
@@ -42,37 +43,38 @@
   const css='.actor-layer,.image-paths{position:absolute;inset:0;pointer-events:none}.image-surface .scene-actor{position:absolute;height:auto;transform:translate(-50%,-100%);max-height:100%;object-fit:contain;border-radius:0;pointer-events:none}.image-path{position:absolute;transform:translate(-50%,-50%);pointer-events:auto;max-width:42%;font:12px/1.3 system-ui;padding:7px 10px;background:#1a241ded;color:#e7efd9;border:1px solid #b4c78c;border-radius:6px;overflow-wrap:anywhere}.image-path{opacity:0;pointer-events:none}.image-path:focus-visible{opacity:1;pointer-events:auto}.image-paths{z-index:4}.actor-layer{z-index:1}';
   function hover(host,scene,index){let n=0;scene.choices.forEach((c,i)=>{if(onImage(c)){host.children[n++].style.opacity=i===index?'1':'';}});}
   // Both players use this conversation controller; effects go through the normal rules engine.
-  function conversations(host,scene,quest,{getState,apply,travel,refresh}){
+  function conversations(host,scene,quest,{getState,apply,travel,refresh,autoHost}){
     let panel=null;
     const dispose=()=>{if(panel){panel.remove();panel=null;}};
     const finish=()=>{dispose();refresh();};
-    [...host.children].forEach((img,index)=>{
-      const placement=scene.actors[index];if(!placement?.dialogue)return;
-      img.classList.add('talkable');img.tabIndex=0;img.setAttribute('role','button');img.setAttribute('aria-label','Поговорить: '+img.alt);img.title='Поговорить: '+img.alt;
-      const start=()=>{
-        dispose();panel=document.createElement('dialog');panel.className='conversation';panel.setAttribute('aria-label','Диалог: '+img.alt);document.body.append(panel);
+    const start=(initialId,name,automatic=false)=>{
+        dispose();panel=document.createElement(automatic?'section':'dialog');panel.className='conversation'+(automatic?' conversation-inline':'');panel.setAttribute('aria-label','Диалог: '+name);if(automatic){autoHost.replaceChildren();autoHost.append(panel);}else document.body.append(panel);
         panel.addEventListener('cancel',e=>{e.preventDefault();finish();});
         const show=(id,message='')=>{
           const node=quest.scenes.find(s=>s.id===id);if(!node){finish();return;}
           panel.replaceChildren();
-          const heading=document.createElement('h2');heading.textContent=img.alt+' · '+node.title;
+          const heading=document.createElement('h2');heading.textContent=node.speaker||name||node.title;
           const text=document.createElement('p');text.className='conversation-text';text.textContent=node.text;panel.append(heading,text);
           if(message){const result=document.createElement('p');result.textContent=message;result.setAttribute('role','status');panel.append(result);}
           for(const choice of node.choices){
             const availability=root.QuestRules.transition(choice,quest.variables||[],getState());
             const button=document.createElement('button');button.className='conversation-answer';button.textContent=choice.text+(choice.check?' · 🎲 D20':'');button.disabled=!availability.ok;panel.append(button);
             if(!availability.ok){const reason=document.createElement('small');reason.textContent=availability.reason;panel.append(reason);}
-            button.onclick=()=>{const next=root.QuestRules.resolve(choice,quest.variables||[],getState());if(!next.ok)return;apply(next.state);const target=quest.scenes.find(s=>s.id===next.target);if(target?.dialogue)show(target.id,next.roll?.message||'');else{dispose();travel(next.target||scene.id,next.roll?.message||'');}};
+            button.onclick=()=>{const next=root.QuestRules.resolve(choice,quest.variables||[],getState());if(!next.ok)return;apply(next.state);const target=quest.scenes.find(s=>s.id===next.target);if(target?.dialogue&&!automatic)show(target.id,next.roll?.message||'');else{dispose();travel(next.target||scene.id,next.roll?.message||'');}};
           }
-          const close=document.createElement('button');close.className='conversation-exit';close.textContent='Завершить разговор';close.onclick=finish;panel.append(close);heading.tabIndex=-1;heading.focus();
+          if(!automatic){const close=document.createElement('button');close.className='conversation-exit';close.textContent='Завершить разговор';close.onclick=finish;panel.append(close);}else if(!node.choices.length){const end=document.createElement('p');end.textContent='Разговор окончен';panel.append(end);}heading.tabIndex=-1;heading.focus();
         };
-        panel.showModal();show(placement.dialogue);
-      };
-      img.onclick=start;img.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();start();}};
+        if(!automatic)panel.showModal();show(initialId);
+    };
+    if(scene.dialogue&&autoHost){start(scene.id,scene.speaker||scene.title,true);return dispose;}
+    [...host.children].forEach((img,index)=>{
+      const placement=scene.actors[index];if(!placement?.dialogue)return;
+      img.classList.add('talkable');img.tabIndex=0;img.setAttribute('role','button');img.setAttribute('aria-label','Поговорить: '+img.alt);img.title='Поговорить: '+img.alt;
+      img.onclick=()=>start(placement.dialogue,img.alt);img.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();start(placement.dialogue,img.alt);}};
     });
     return dispose;
   }
-  const conversationCSS='.actor-layer:has(.talkable){z-index:5}.image-surface .scene-actor.talkable{pointer-events:auto;cursor:pointer}.talkable:hover,.talkable:focus-visible{filter:drop-shadow(0 0 7px #d8e5a0);outline:2px solid #c9dc91}.conversation{box-sizing:border-box;width:min(620px,92vw);max-height:85vh;overflow:auto;background:#1d251b;color:#e5e8dc;border:1px solid #8b9d68;border-radius:12px;padding:24px}.conversation::backdrop{background:#0009}.conversation-text{white-space:pre-wrap;line-height:1.6}.conversation-answer{display:block;width:100%;text-align:left;margin:10px 0}.conversation-exit{margin-top:22px}.conversation small{display:block}';
+  const conversationCSS='.actor-layer:has(.talkable){z-index:5}.image-surface .scene-actor.talkable{pointer-events:auto;cursor:pointer}.talkable:hover,.talkable:focus-visible{filter:drop-shadow(0 0 7px #d8e5a0);outline:2px solid #c9dc91}.conversation{box-sizing:border-box;width:min(620px,92vw);max-height:85vh;overflow:auto;background:#1d251b;color:#e5e8dc;border:1px solid #8b9d68;border-radius:12px;padding:24px}.conversation::backdrop{background:#0009}.conversation-text{white-space:pre-wrap;line-height:1.6}.conversation-answer{display:block;width:100%;text-align:left;margin:10px 0}.conversation-exit{margin-top:22px}.conversation small{display:block}.conversation-inline{width:100%;max-height:none;margin:16px 0;overflow:visible}.conversation-inline h2{font-size:22px;margin-top:0}';
   const api={conversations,conversationCSS,hover,validate,actors,paths,onImage,anchor,css:css+conversationCSS,pictures,picture};api.standaloneSource=()=>`(${installSceneLayers.toString()})(globalThis);`;
   if(typeof module!=='undefined')module.exports=api;else root.QuestLayers=api;
 })(globalThis);

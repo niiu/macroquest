@@ -36,12 +36,12 @@
       $('scene-title').textContent=scene.title||'Без названия';$('scene-text').textContent=scene.text;
       $('choices').replaceChildren();
       for(const choice of scene.choices){
-        if(scene.image&&QuestLayers.onImage(choice))continue;
+        if(!scene.dialogue&&scene.image&&QuestLayers.onImage(choice))continue;
         const availability=result(choice),button=element('button',(availability.ok?'→ ':'🔒 ')+choice.text+(choice.check?' · 🎲 D20':''),'choice');
         button.disabled=!availability.ok;button.onclick=()=>take(choice);$('choices').append(button);
         if(!availability.ok)$('choices').append(element('p',availability.reason,'muted reason'));
       }
-      QuestLayers.actors($('actors'),scene,quest.characters||[]);disposeConversation=QuestLayers.conversations($('actors'),scene,quest,{getState:()=>state,apply:next=>{state=next;saveControls.autosave();},travel:(id,message)=>{current=id;render();$('roll-result').textContent=message;saveControls.autosave();},refresh:render});QuestLayers.paths($('image-paths'),scene,quest.scenes,result,take);
+      QuestLayers.actors($('actors'),scene,quest.characters||[]);disposeConversation=QuestLayers.conversations($('actors'),scene,quest,{getState:()=>state,apply:next=>{state=next;saveControls.autosave();},travel:(id,message)=>{current=id;render();$('roll-result').textContent=message;saveControls.autosave();},refresh:render,autoHost:$('choices')});$('scene-text').hidden=!!scene.dialogue;QuestLayers.paths($('image-paths'),scene,quest.scenes,result,take);
       $('ending').hidden=!!scene.choices.length||!!scene.actors?.some(p=>p.dialogue);
       $('no-paths').hidden=!scene.choices.length||scene.choices.some(c=>result(c).ok);
       $('state').replaceChildren();$('state-panel').hidden=!variables.length;
@@ -52,7 +52,7 @@
         for(const v of entries){list.append(element('dt',v.name),element('dd',type==='flag'?(state[v.id]?'Включён':'Выключен'):String(state[v.id])+(type==='item'?' шт.':'')));}
         group.append(list);$('state').append(group);
       }
-      hoveredZone=-1;imageReady=false;$('image-wrap').hidden=!scene.image;$('image-error').hidden=true;
+      hoveredZone=-1;imageReady=false;$('image-wrap').hidden=!scene.image||!!scene.dialogue;$('image-error').hidden=true;
       $('hotspot').textContent='Нажмите на область изображения или выберите действие ниже.';$('zones').style.cursor='default';
       const image=$('image'),canvas=$('zones');canvas.getContext('2d').clearRect(0,0,canvas.width,canvas.height);
       image.onload=()=>{if(activeScene()!==scene)return;canvas.width=image.naturalWidth;canvas.height=image.naturalHeight;imageReady=true;drawZones();};
@@ -69,7 +69,7 @@
     render();
   }
   function build(project){
-    const quest={version:1,title:project.title,start:project.start,...(project.characters?.length?{characters:project.characters}:{}),variables:project.variables||[],scenes:project.scenes.map(s=>({id:s.id,title:s.title,text:s.text,...(s.dialogue?{dialogue:true}:{}),...(s.actors?.length?{actors:s.actors}:{}),...(s.image?{image:s.image}:{}),choices:s.choices.map(c=>({text:c.text,target:c.target,...(c.check?{check:c.check}:{}),zone:c.zone||[],conditions:c.conditions||[],conditionMode:c.conditionMode||'all',effects:c.effects||[]}))}))};
+    const quest={version:1,title:project.title,start:project.start,...(project.characters?.length?{characters:project.characters}:{}),variables:project.variables||[],scenes:project.scenes.map(s=>({id:s.id,title:s.title,text:s.text,...(s.dialogue?{dialogue:true}:{}),...(s.speaker?{speaker:s.speaker}:{}),...(s.actors?.length?{actors:s.actors}:{}),...(s.image?{image:s.image}:{}),choices:s.choices.map(c=>({text:c.text,target:c.target,...(c.check?{check:c.check}:{}),zone:c.zone||[],conditions:c.conditions||[],conditionMode:c.conditionMode||'all',effects:c.effects||[]}))}))};
     rules.validateVariables(quest.variables);layers.validate(quest);
     const ids=new Set(quest.scenes.map(s=>s.id));
     if(!ids.has(quest.start)||ids.size!==quest.scenes.length)throw Error('Проверьте начальную сцену и идентификаторы.');

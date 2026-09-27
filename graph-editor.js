@@ -64,6 +64,7 @@ function setSceneTab(name){
   for(const panel of document.querySelectorAll('[data-editor-panel]'))panel.hidden=panel.dataset.editorPanel!==name;
   for(const button of document.querySelectorAll('[data-editor-tab]'))button.setAttribute('aria-pressed',String(button.dataset.editorTab===name));
   if(name==='image')paintZones();
+  if(scene().dialogue){for(const panel of document.querySelectorAll('[data-editor-panel]'))panel.hidden=true;}
 }
 function openSceneEditor(){
   if(isEditorDocked())$('scene-editor').scrollIntoView({behavior:'smooth',block:'start'});
